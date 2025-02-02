@@ -103,7 +103,7 @@ export default function Cart() {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
           <div className="flex justify-between items-center mb-4">
             <span className="font-medium">总计：</span>
-            <span className="text-xl font-semibold">${totalPrice}</span>
+            <span className="text-xl font-semibold">${totalPrice.toFixed(2)}</span>
           </div>
           <button
             className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors mb-2"
@@ -116,7 +116,7 @@ export default function Cart() {
                   },
                   body: JSON.stringify({
                     items: cartItems,
-                    total: totalPrice,
+                    total: totalPrice.toFixed(2),
                   }),
                 });
 

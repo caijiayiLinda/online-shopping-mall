@@ -63,7 +63,7 @@ export default function CartButton() {
                     <div className="flex-1">
                       <h3 className="font-medium">{item.name}</h3>
                       <p className="text-gray-600">
-                        {item.quantity} x ${item.price} = ${item.quantity * item.price}
+                        {item.quantity} x ${item.price} = ${(item.quantity * item.price).toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -75,7 +75,7 @@ export default function CartButton() {
             <div className="p-4 border-t">
               <div className="flex justify-between items-center mb-4">
                 <span className="font-medium">Total:</span>
-                <span className="text-xl font-semibold">${totalPrice}</span>
+                <span className="text-xl font-semibold">${totalPrice.toFixed(2)}</span>
               </div>
               <button
                 className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
