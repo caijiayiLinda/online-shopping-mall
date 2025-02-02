@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import dynamic from 'next/dynamic';
 import { useCartContext } from '@/context/CartContext';
 
-const Cart = dynamic(() => import('./Cart'), { ssr: false });
 
 export default function CartButton() {
   const [isCartOpen, setIsCartOpen] = useState(false);
