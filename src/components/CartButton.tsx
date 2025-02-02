@@ -1,14 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useCartContext } from '@/context/CartContext';
-
 
 export default function CartButton() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const { cartItems } = useCartContext();
 
   const cartQuantity = cartItems.reduce((total, item) => total + item.quantity, 0);
+  const totalPrice = cartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
 
   return (
     <div
@@ -38,8 +42,48 @@ export default function CartButton() {
         )}
       </button>
       {isCartOpen && (
-        <div className="absolute right-0 mt-2 w-96 z-50 bg-lightgray">
-          <div>Cart is open</div>
+        <div className="absolute right-0 mt-2 w-96 z-50 bg-white shadow-lg border rounded-md">
+          <div className="p-4 border-b">
+            <h2 className="text-lg font-semibold">Shopping Cart</h2>
+          </div>
+          <div className="p-4">
+            {cartItems.length === 0 ? (
+              <p className="text-gray-600">Your cart is empty</p>
+            ) : (
+              <div className="space-y-4">
+                {cartItems.map((item) => (
+                  <div key={item.id} className="flex items-center space-x-4">
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      width={48}
+                      height={48}
+                      className="object-cover rounded"
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-medium">{item.name}</h3>
+                      <p className="text-gray-600">
+                        {item.quantity} x ${item.price} = ${item.quantity * item.price}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {cartItems.length > 0 && (
+            <div className="p-4 border-t">
+              <div className="flex justify-between items-center mb-4">
+                <span className="font-medium">Total:</span>
+                <span className="text-xl font-semibold">${totalPrice}</span>
+              </div>
+              <button
+                className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
+              >
+                Checkout
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
