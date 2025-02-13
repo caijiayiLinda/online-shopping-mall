@@ -5,7 +5,13 @@ import Nav from '@/components/Nav';
 import Image from 'next/image';
 import Cart from '@/components/Cart';
 
-export default function ProductPage({ params }: { params: { id: string } }) {
+type ProductPageProps = {
+  params: {
+    id: string;
+  };
+};
+
+export default function ProductPage({ params }: ProductPageProps) {
   const product = products.find((p) => p.id === params.id);
 
   if (!product) {
