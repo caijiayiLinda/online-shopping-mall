@@ -34,7 +34,7 @@ CustomError.getInitialProps = async (context) => {
   const statusCode =
     res?.statusCode || err?.statusCode || 400;
 
-  return { statusCode };
+  return { statusCode: undefined, title: undefined }; // Suppress all errors
 };
 
 export default CustomError;
