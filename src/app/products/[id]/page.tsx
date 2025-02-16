@@ -1,3 +1,5 @@
+'use client';
+
 import { notFound } from 'next/navigation';
 import { products } from '@/data/products';
 import AddToCartButton from '@/components/AddToCartButton';
@@ -5,13 +7,23 @@ import Nav from '@/components/Nav';
 import Image from 'next/image';
 import Cart from '@/components/Cart';
 
-type ProductPageProps = {
+type PageProps = {
   params: {
     id: string;
   };
+  searchParams?: {
+    [key: string]: string | string[] | undefined;
+  };
 };
 
-export default function ProductPage({ params }: ProductPageProps) {
+import { useParams } from 'next/navigation';
+
+export default function ProductPage({}: {}) {
+  const params = useParams();
+  if (!params || !params.id) {
+    notFound();
+  }
+
   const product = products.find((p) => p.id === params.id);
 
   if (!product) {
