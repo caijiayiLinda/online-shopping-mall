@@ -7,18 +7,9 @@ import Nav from '@/components/Nav';
 import Image from 'next/image';
 import Cart from '@/components/Cart';
 
-type PageProps = {
-  params: {
-    id: string;
-  };
-  searchParams?: {
-    [key: string]: string | string[] | undefined;
-  };
-};
-
 import { useParams } from 'next/navigation';
 
-export default function ProductPage({}: {}) {
+export default function ProductPage() {
   const params = useParams();
   if (!params || !params.id) {
     notFound();

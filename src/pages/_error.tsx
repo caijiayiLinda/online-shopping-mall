@@ -22,7 +22,7 @@ const CustomError: NextPage<ErrorProps> = ({ statusCode, title }) => {
 };
 
 CustomError.getInitialProps = async (context) => {
-  const { res, err } = context;
+  const { err } = context;
 
   // Check if the error is a hydration error
   if (err?.message.includes('Hydration failed')) {
@@ -30,11 +30,7 @@ CustomError.getInitialProps = async (context) => {
     return { statusCode: undefined, title: undefined };
   }
 
-  // Get the status code from the response
-  const statusCode =
-    res?.statusCode || err?.statusCode || 400;
-
-  return { statusCode: undefined, title: undefined }; // Suppress all errors
+  return { title: undefined }; // Suppress all errors
 };
 
 export default CustomError;
