@@ -2,6 +2,11 @@
 
 import { useState, useEffect } from 'react';
 
+interface Category {
+  id: number;
+  name: string;
+}
+
 interface Product {
   id?: number;
   category_id: number | string;
@@ -14,6 +19,7 @@ interface Product {
 
 export default function ProductManagePage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<Product>({
     category_id: '',
@@ -21,18 +27,43 @@ export default function ProductManagePage() {
     price: '',
     description: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchCategories = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:8080/api/categories');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      const data = await response.json();
+      setCategories(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch categories');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:8080/api/products');
+      if (!response.ok) throw new Error('Failed to fetch products');
+      const data = await response.json();
+      setProducts(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch products');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchProducts();
+    fetchCategories();
   }, []);
 
-  const fetchProducts = async () => {
-    const response = await fetch('http://localhost:8080/api/products');
-    const data = await response.json();
-    setProducts(data);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
@@ -51,27 +82,31 @@ export default function ProductManagePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const formDataToSend = new FormData();
-    Object.entries(formData).forEach(([key, value]) => {
-      if (value !== undefined && value !== '') {
-        formDataToSend.append(key, 
-          key === 'category_id' || key === 'price' 
-            ? Number(value).toString() 
-            : value.toString()
-        );
-      }
-    });
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const formDataToSend = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          formDataToSend.append(key, 
+            key === 'category_id' || key === 'price' 
+              ? Number(value).toString() 
+              : value.toString()
+          );
+        }
+      });
 
-    const url = selectedProduct ? `http://localhost:8080/api/products/${selectedProduct.id}` : 'http://localhost:8080/api/products';
-    const method = selectedProduct ? 'PUT' : 'POST';
+      const url = selectedProduct ? `http://localhost:8080/api/products/${selectedProduct.id}` : 'http://localhost:8080/api/products';
+      const method = selectedProduct ? 'PUT' : 'POST';
 
-    const response = await fetch(url, {
-      method,
-      body: formDataToSend
-    });
+      const response = await fetch(url, {
+        method,
+        body: formDataToSend
+      });
 
-    if (response.ok) {
+      if (!response.ok) throw new Error(selectedProduct ? 'Failed to update product' : 'Failed to create product');
+
       setSelectedProduct(null);
       setFormData({
         category_id: '',
@@ -79,7 +114,11 @@ export default function ProductManagePage() {
         price: '',
         description: ''
       });
-      fetchProducts();
+      await fetchProducts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save product');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -89,12 +128,19 @@ export default function ProductManagePage() {
   };
 
   const handleDelete = async (id: number) => {
-    const response = await fetch(`http://localhost:8080/api/products/${id}`, {
-      method: 'DELETE'
-    });
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`http://localhost:8080/api/products/${id}`, {
+        method: 'DELETE'
+      });
 
-    if (response.ok) {
-      fetchProducts();
+      if (!response.ok) throw new Error('Failed to delete product');
+      await fetchProducts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete product');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -102,18 +148,34 @@ export default function ProductManagePage() {
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Product Management</h1>
 
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">
+          {error}
+        </div>
+      )}
+      {loading && (
+        <div className="mb-4 p-4 bg-blue-100 text-blue-700 rounded">
+          Loading...
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="mb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-group">
-            <label>Category ID:</label>
-            <input
-              type="number"
+            <label>Category:</label>
+            <select
               name="category_id"
               value={formData.category_id}
               onChange={handleInputChange}
               className="w-full p-2 border rounded"
               required
-            />
+            >
+              <option value="">Select a category</option>
+              {categories.map(category => (
+                <option key={category.id} value={category.id}>
+                  {category.name} (ID: {category.id})
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group">
