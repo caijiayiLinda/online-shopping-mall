@@ -27,7 +27,7 @@ export default function ProductManagePage() {
   }, []);
 
   const fetchProducts = async () => {
-    const response = await fetch('/api/products');
+    const response = await fetch('http://localhost:8080/api/products');
     const data = await response.json();
     setProducts(data);
   };
@@ -63,7 +63,7 @@ export default function ProductManagePage() {
       }
     });
 
-    const url = selectedProduct ? `/api/products/${selectedProduct.id}` : '/api/products';
+    const url = selectedProduct ? `http://localhost:8080/api/products/${selectedProduct.id}` : 'http://localhost:8080/api/products';
     const method = selectedProduct ? 'PUT' : 'POST';
 
     const response = await fetch(url, {
@@ -89,7 +89,7 @@ export default function ProductManagePage() {
   };
 
   const handleDelete = async (id: number) => {
-    const response = await fetch(`/api/products/${id}`, {
+    const response = await fetch(`http://localhost:8080/api/products/${id}`, {
       method: 'DELETE'
     });
 
