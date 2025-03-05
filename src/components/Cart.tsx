@@ -124,16 +124,16 @@ export default function Cart() {
                 window.location.href = url;
               } catch (error) {
                 console.error('Checkout error:', error);
-                alert('支付处理失败，请稍后重试');
+                alert('Payment processing failed, please try again later');
               }
             }}
           >
-            结算
+            check out
           </button>
           <button
             className="w-full text-blue-500 py-2 px-4 rounded hover:text-blue-600 transition-colors border border-blue-500"
           >
-            继续购物
+            back
           </button>
         </div>
       </div>
