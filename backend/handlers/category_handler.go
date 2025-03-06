@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -10,7 +11,8 @@ import (
 )
 
 type CategoryHandler struct {
-	DB *sql.DB
+	DB     *sql.DB
+	Logger *log.Logger
 }
 
 func (h *CategoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
@@ -125,6 +127,7 @@ func (h *CategoryHandler) GetCategory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CategoryHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
+	h.Logger.Printf("Handling ListCategories request")
 	rows, err := h.DB.Query("SELECT catid, name FROM categories")
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)

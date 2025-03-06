@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,13 +16,20 @@ import (
 )
 
 type ProductHandler struct {
-	DB *sql.DB
+	DB     *sql.DB
+	Logger *log.Logger
 }
 
 func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
+	// Log request details
+	h.Logger.Printf("CreateProduct request received")
+	h.Logger.Printf("Request Headers: %v", r.Header)
+	h.Logger.Printf("Request Form Data: %v", r.Form)
+
 	// Parse multipart form
 	err := r.ParseMultipartForm(10 << 20) // 10MB
 	if err != nil {
+		h.Logger.Printf("Error parsing form: %v", err)
 		http.Error(w, "Unable to parse form", http.StatusBadRequest)
 		return
 	}
@@ -54,8 +62,15 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	ext := filepath.Ext(handler.Filename)
 	newFilename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
 
+	// Ensure public/images directory exists
+	if err := os.MkdirAll("public/images", 0755); err != nil {
+		http.Error(w, "Failed to create images directory", http.StatusInternalServerError)
+		return
+	}
+
 	// Save file
-	dst, err := os.Create(filepath.Join("public/images", newFilename))
+	filePath := filepath.Join("public/images", newFilename)
+	dst, err := os.Create(filePath)
 	if err != nil {
 		http.Error(w, "Unable to save file", http.StatusInternalServerError)
 		return
@@ -68,9 +83,12 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Log file save success
+	h.Logger.Printf("Successfully saved image to: %s", filePath)
+
 	// Insert product into database
 	query := `INSERT INTO products (catid, name, price, description, image_url) VALUES (?, ?, ?, ?, ?)`
-	result, err := h.DB.Exec(query, categoryID, name, price, description, newFilename)
+	result, err := h.DB.Exec(query, categoryID, name, price, description, "/images/" + newFilename)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
@@ -83,18 +101,24 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return created product
+	// Return created product with full image URL path
 	product := models.Product{
 		ID:          int(productID),
 		CategoryID:  categoryID,
 		Name:        name,
 		Price:       price,
 		Description: description,
-		ImageURL:    newFilename,
+		ImageURL:    "/images/" + newFilename,
 	}
 
+	// Log successful response
+	h.Logger.Printf("Successfully created product: %+v", product)
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(product)
+	if err := json.NewEncoder(w).Encode(product); err != nil {
+		h.Logger.Printf("Error encoding response: %v", err)
+		http.Error(w, "Error creating response", http.StatusInternalServerError)
+	}
 }
 
 func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
@@ -158,7 +182,7 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	var result sql.Result
 	if newFilename != "" {
 		query = `UPDATE products SET catid = ?, name = ?, price = ?, description = ?, image_url = ? WHERE pid = ?`
-		result, err = h.DB.Exec(query, categoryID, name, price, description, newFilename, productID)
+		result, err = h.DB.Exec(query, categoryID, name, price, description, "/images/" + newFilename, productID)
 	} else {
 		query = `UPDATE products SET catid = ?, name = ?, price = ?, description = ? WHERE pid = ?`
 		result, err = h.DB.Exec(query, categoryID, name, price, description, productID)
@@ -180,14 +204,14 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return updated product
+	// Return updated product with full image URL path
 	product := models.Product{
 		ID:          productID,
 		CategoryID:  categoryID,
 		Name:        name,
 		Price:       price,
 		Description: description,
-		ImageURL:    newFilename,
+		ImageURL:    "/images/" + newFilename,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -251,6 +275,7 @@ func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
+	h.Logger.Printf("Handling ListProducts request")
 	// Query products from database
 	rows, err := h.DB.Query("SELECT pid, catid, name, price, description, image_url FROM products")
 	if err != nil {

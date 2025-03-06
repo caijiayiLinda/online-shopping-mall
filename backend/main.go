@@ -44,9 +44,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Initialize handlers
-	productHandler := &handlers.ProductHandler{DB: db}
-	categoryHandler := &handlers.CategoryHandler{DB: db}
+	// Initialize handlers with logger
+	productHandler := &handlers.ProductHandler{DB: db, Logger: log.Default()}
+	categoryHandler := &handlers.CategoryHandler{DB: db, Logger: log.Default()}
 
 	// Setup routes
 	http.HandleFunc("/products", productHandler.ListProducts)
@@ -98,7 +98,12 @@ func main() {
 // logRequest middleware logs incoming requests
 func logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Request: %s %s", r.Method, r.URL.Path)
+		// Skip logging for multipart requests to avoid consuming request body
+		if r.Header.Get("Content-Type") == "multipart/form-data" {
+			log.Printf("Request: %s %s [multipart]", r.Method, r.URL.Path)
+		} else {
+			log.Printf("Request: %s %s", r.Method, r.URL.Path)
+		}
 		next.ServeHTTP(w, r)
 	})
 }
@@ -108,7 +113,9 @@ func cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Content-Length, X-Requested-With")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Max-Age", "86400")
 		
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
