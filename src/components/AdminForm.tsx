@@ -2,21 +2,14 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
+import EditProductForm from './EditProductForm'
+import { Product } from '../types'
 
 interface Category {
   id: number
   name: string
   createdAt: string
   updatedAt: string
-}
-
-interface Product {
-  id: number
-  name: string
-  price: number
-  description: string
-  image_url: string
-  category_id: number
 }
 
 export default function AdminForm() {
@@ -43,7 +36,7 @@ export default function AdminForm() {
         setCategories(formattedCategories)
       } catch (error) {
         console.error('Failed to fetch categories:', error)
-        toast.error('获取类别失败')
+        toast.error('获取Category失败')
       }
     }
     fetchCategories()
@@ -64,43 +57,48 @@ export default function AdminForm() {
     }
   }
 
-  const handleDeleteProduct = async (productId: number) => {
-    if (window.confirm('确定要删除该产品吗？')) {
+  const handleDeleteProduct = async (productId: string) => {
+    if (window.confirm('确定要Delete该产品吗？')) {
       try {
         await axios.delete(`/api/products/delete?id=${productId}`)
-        toast.success('产品删除成功')
+        toast.success('产品Delete成功')
         fetchProducts()
       } catch (error) {
         console.error('Failed to delete product:', error)
-        toast.error('产品删除失败')
+        toast.error('产品Delete失败')
       }
     }
   }
 
-  const handleEditProduct = async (product: Product) => {
-    const newName = prompt('请输入产品名称', product.name)
-    const newPrice = prompt('请输入产品价格', product.price.toString())
-    const newDescription = prompt('请输入产品描述', product.description)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
 
-    if (newName && newPrice && newDescription) {
-      try {
-        const formData = new FormData()
-        formData.append('name', newName)
-        formData.append('price', newPrice)
-        formData.append('description', newDescription)
-        formData.append('category_id', product.category_id.toString())
-        
-        await axios.put(`/api/products/update?id=${product.id}`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        })
-        toast.success('产品更新成功')
-        fetchProducts()
-      } catch (error) {
-        console.error('Failed to update product:', error)
-        toast.error('产品更新失败')
-      }
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingProduct(null)
+  }
+
+  const handleUpdateProduct = async (updatedProduct: Product) => {
+    try {
+      const formData = new FormData()
+      formData.append('name', updatedProduct.name)
+      formData.append('price', updatedProduct.price.toString())
+      formData.append('description', updatedProduct.description)
+      formData.append('category_id', updatedProduct.category_id.toString())
+      
+      await axios.put(`/api/products/update?id=${updatedProduct.id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      toast.success('产品更新成功')
+      setEditingProduct(null)
+      fetchProducts()
+    } catch (error) {
+      console.error('Failed to update product:', error)
+      toast.error('产品更新失败')
     }
   }
 
@@ -135,6 +133,11 @@ export default function AdminForm() {
         }
       })
       toast.success('产品创建成功')
+      // 重置表单字段
+      setName('')
+      setPrice('')
+      setDescription('')
+      setImage(null)
       fetchProducts()
     } catch (error) {
       console.error('Failed to create product:', error)
@@ -145,16 +148,40 @@ export default function AdminForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="space-y-4">
+      {editingProduct && (
+        <div className="bg-blue-50 p-6 rounded-lg shadow mb-8 border border-blue-200">
+          <h2 className="text-xl font-bold mb-4">Edit Product</h2>
+          <EditProductForm 
+            product={{
+              id: editingProduct.id.toString(),
+              name: editingProduct.name,
+              price: editingProduct.price,
+              description: editingProduct.description,
+              image_url: editingProduct.image_url,
+              category_id: editingProduct.category_id.toString()
+            }}
+            onSubmit={handleUpdateProduct}
+          />
+          <button
+            onClick={handleCancelEdit}
+            className="w-full bg-gray-200 p-2 rounded hover:bg-gray-300 mt-4"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-1">类别</label>
+        <label className="block text-sm font-medium mb-1">Category</label>
         <select
           value={selectedCategory || ''}
           onChange={(e) => setSelectedCategory(Number(e.target.value))}
           className="w-full p-2 border rounded"
           required
         >
-          <option value="">选择类别</option>
+          <option value="">Select Category</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
@@ -164,7 +191,7 @@ export default function AdminForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">产品名称</label>
+        <label className="block text-sm font-medium mb-1">Product Name</label>
         <input
           type="text"
           value={name}
@@ -175,7 +202,7 @@ export default function AdminForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">价格</label>
+        <label className="block text-sm font-medium mb-1">Product Price</label>
         <input
           type="number"
           value={price}
@@ -186,7 +213,7 @@ export default function AdminForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">描述</label>
+        <label className="block text-sm font-medium mb-1">Product Description</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -197,7 +224,7 @@ export default function AdminForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">产品图片</label>
+        <label className="block text-sm font-medium mb-1">Product Image</label>
         <input
           type="file"
           accept=".jpg,.jpeg,.png,.gif"
@@ -205,7 +232,7 @@ export default function AdminForm() {
           className="w-full p-2 border rounded"
           required
         />
-        <p className="text-sm text-gray-500 mt-1">支持格式：jpg, png, gif，最大10MB</p>
+        <p className="text-sm text-gray-500 mt-1">Supported formats: jpg, png, gif. The maximum size is 10MB.</p>
       </div>
 
       <button
@@ -213,16 +240,16 @@ export default function AdminForm() {
         disabled={loading}
         className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
       >
-        {loading ? '提交中...' : '提交'}
+        {loading ? 'submitting...' : 'Submit'}
       </button>
 
-      <button
-        type="button"
-        onClick={fetchProducts}
-        className="w-full bg-gray-200 p-2 rounded hover:bg-gray-300 mt-4"
-      >
-        刷新产品列表
-      </button>
+        <button
+          type="button"
+          onClick={fetchProducts}
+          className="w-full bg-gray-200 p-2 rounded hover:bg-gray-300 mt-4 hidden"
+        >
+          Refresh
+        </button>
 
       <div className="mt-8">
         <h2 className="text-xl font-bold mb-4">产品列表</h2>
@@ -241,19 +268,21 @@ export default function AdminForm() {
                   <p className="text-sm text-gray-500">category id: {product.category_id}</p>
                   <p className="text-sm text-gray-500">{product.description}</p>
                   <div className="flex space-x-2 mt-2">
+                    {!editingProduct && (
+                      <button
+                        type="button"
+                        onClick={() => handleEditProduct(product)}
+                        className="text-sm bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
+                      >
+                        Edit
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => handleEditProduct(product)}
-                      className="text-sm bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
-                    >
-                      编辑
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteProduct(product.id)}
+                      onClick={() => handleDeleteProduct(product.id.toString())}
                       className="text-sm bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
                     >
-                      删除
+                      Delete
                     </button>
                   </div>
                 </div>
@@ -263,5 +292,6 @@ export default function AdminForm() {
         </div>
       </div>
     </form>
+    </div>
   )
 }

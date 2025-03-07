@@ -62,14 +62,14 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	ext := filepath.Ext(handler.Filename)
 	newFilename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
 
-	// Ensure public/images directory exists
-	if err := os.MkdirAll("public/images", 0755); err != nil {
+	// Ensure images directory exists
+	if err := os.MkdirAll("/home/caijiayi/online-shopping-mall/public/images", 0755); err != nil {
 		http.Error(w, "Failed to create images directory", http.StatusInternalServerError)
 		return
 	}
 
 	// Save file
-	filePath := filepath.Join("public/images", newFilename)
+	filePath := filepath.Join("/home/caijiayi/online-shopping-mall/public/images", newFilename)
 	dst, err := os.Create(filePath)
 	if err != nil {
 		http.Error(w, "Unable to save file", http.StatusInternalServerError)
@@ -87,8 +87,8 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	h.Logger.Printf("Successfully saved image to: %s", filePath)
 
 	// Insert product into database
-	query := `INSERT INTO products (catid, name, price, description, image_url) VALUES (?, ?, ?, ?, ?)`
-	result, err := h.DB.Exec(query, categoryID, name, price, description, "/images/" + newFilename)
+		query := `INSERT INTO products (catid, name, price, description, image_url) VALUES (?, ?, ?, ?, ?)`
+		result, err := h.DB.Exec(query, categoryID, name, price, description, "/images/" + newFilename)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
@@ -163,7 +163,7 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		newFilename = fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
 
 		// Save file
-		dst, err := os.Create(filepath.Join("public/images", newFilename))
+		dst, err := os.Create(filepath.Join("/home/caijiayi/online-shopping-mall/public/images", newFilename))
 		if err != nil {
 			http.Error(w, "Unable to save file", http.StatusInternalServerError)
 			return
