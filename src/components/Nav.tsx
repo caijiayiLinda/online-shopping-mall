@@ -2,25 +2,58 @@
 
 import Link from 'next/link';
 import CartButton from './CartButton';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { categories } from '@/data/products';
+import axios from 'axios';
+
+const useCategories = () => {
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get('/api/categories');
+        const categoryNames = response.data.map((c: any) => c.name);
+        setCategories(categoryNames);
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  return categories;
+};
 
 interface NavProps {
-  category?: string;
+  categoryId?: string;
   product?: string;
   children: React.ReactNode;
 }
 
-export default function Nav({ category, product, children }: NavProps) {
+export default function Nav({ categoryId, product, children }: NavProps) {
   const router = useRouter();
-  const [selectedCategory, setSelectedCategory] = useState(category || '');
+  const [selectedCategory, setSelectedCategory] = useState(categoryId || '');
 
-  const handleCategoryClick = (category: string) => {
-    setSelectedCategory(category);
-    router.push(`/?category=${category}`);
-  };
+  const categoryMap = {
+  'Clothing': 1,
+  'Tools': 2,
+  'Toys': 3,
+  'Beauty': 4,
+  'Pets': 5
+};
 
+const handleCategoryClick = (category: string) => {
+  setSelectedCategory(category);
+  if (category) {
+    const categoryId = categoryMap[category as keyof typeof categoryMap];
+    router.push(`/?categoryId=${categoryId}`);
+  } else {
+    router.push('/');
+  }
+};
+
+  const categories = useCategories();
   const uniqueCategories = [...new Set(categories)];
 
   return (
@@ -43,9 +76,9 @@ export default function Nav({ category, product, children }: NavProps) {
                   All
                 </button>
             {uniqueCategories.map((category) => (
-              <button
+              <Link
                 key={category}
-                onClick={() => handleCategoryClick(category)}
+                href={`/?categoryId=${categoryMap[category as keyof typeof categoryMap]}`}
                 className={`px-3 py-2 text-sm rounded-md ${
                   selectedCategory === category
                     ? 'bg-blue-500 text-white'
@@ -53,7 +86,7 @@ export default function Nav({ category, product, children }: NavProps) {
                 }`}
               >
                 {category}
-              </button>
+              </Link>
             ))}
           </div>
           <CartButton />
@@ -61,10 +94,10 @@ export default function Nav({ category, product, children }: NavProps) {
         {/* Breadcrumbs */}
         <div className="py-2">
           <Link href="/" className="text-blue-500 hover:underline">Home</Link>
-          {category && category !== '' && (
+          {categoryId && categoryId !== '' && (
             <span className="inline-flex items-center">
               <span className="mx-2">{'>'}</span>
-              <Link href={`/?category=${category}`} className="text-blue-500 hover:underline">{category}</Link>
+              <Link href={`/categories/${categoryId.toLowerCase()}`} className="text-blue-500 hover:underline">{categoryId}</Link>
               {product && product !== '' && (
                 <span className="inline-flex items-center">
                   <span className="mx-2">{'>'}</span>

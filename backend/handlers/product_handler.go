@@ -274,6 +274,40 @@ func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(p)
 }
 
+func (h *ProductHandler) GetProductsByCategoryID(w http.ResponseWriter, r *http.Request) {
+	categoryID, err := strconv.Atoi(r.URL.Query().Get("category_id"))
+	if err != nil {
+		http.Error(w, "Invalid category ID", http.StatusBadRequest)
+		return
+	}
+
+	rows, err := h.DB.Query("SELECT pid, catid, name, price, description, image_url FROM products WHERE catid = ?", categoryID)
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var products []models.Product
+	for rows.Next() {
+		var p models.Product
+		err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Price, &p.Description, &p.ImageURL)
+		if err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		products = append(products, p)
+	}
+
+	if err = rows.Err(); err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(products)
+}
+
 func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	h.Logger.Printf("Handling ListProducts request")
 	// Query products from database

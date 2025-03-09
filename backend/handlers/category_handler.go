@@ -104,6 +104,28 @@ func (h *CategoryHandler) DeleteCategory(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *CategoryHandler) GetCategoryIDByName(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		http.Error(w, "name is required", http.StatusBadRequest)
+		return
+	}
+
+	var categoryID int
+	err := h.DB.QueryRow("SELECT catid FROM categories WHERE name = ?", name).Scan(&categoryID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Category not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]int{"category_id": categoryID})
+}
+
 func (h *CategoryHandler) GetCategory(w http.ResponseWriter, r *http.Request) {
 	categoryID, err := strconv.Atoi(r.URL.Query().Get("id"))
 	if err != nil {

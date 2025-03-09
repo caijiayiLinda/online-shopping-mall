@@ -3,20 +3,45 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import AddToCartButton from './AddToCartButton';
-import { products } from '@/data/products';
+import { useState, useEffect } from 'react';
+import { Product } from '@/types';
 
 interface ProductListProps {
-  category?: string;
+  categoryId?: string;
 }
 
-export default function ProductList({ category }: ProductListProps) {
-  const filteredProducts = category
-    ? products.filter((p) => p.category === category)
-    : products;
+export default function ProductList({ categoryId }: ProductListProps) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const url = categoryId 
+          ? `/api/products/category?category_id=${categoryId}`
+          : '/api/products';
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error('Failed to fetch products');
+        }
+        const data = await response.json();
+        setProducts(data);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, [categoryId]);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {filteredProducts.map((product) => (
+      {products.map((product) => (
         <div
           key={product.id}
           className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
@@ -25,7 +50,7 @@ export default function ProductList({ category }: ProductListProps) {
             <div className="cursor-pointer flex flex-col">
               <div className="w-full h-48 relative">
                 <Image
-                  src={product.image}
+                  src={product.image_url}
                   alt={product.name}
                   fill
                   className="object-cover"

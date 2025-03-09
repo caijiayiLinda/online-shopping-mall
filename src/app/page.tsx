@@ -12,12 +12,12 @@ function Loading() {
 
 export default function Home() {
   const searchParams = useSearchParams()!;
-  const selectedCategory = searchParams.get('category') || undefined;
+  const categoryId = searchParams.get('categoryId') || undefined;
 
   return (
     <Suspense fallback={<Loading />}>
-      <Nav category={selectedCategory}>
-        <ProductList category={selectedCategory} />
+      <Nav categoryId={categoryId}>
+        <ProductList categoryId={categoryId} />
         <Cart />
       </Nav>
     </Suspense>

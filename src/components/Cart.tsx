@@ -1,12 +1,45 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useCartContext } from '@/context/CartContext';
+import { Product } from '@/types';
 
-export default function Cart() {
-  const [isOpen, setIsOpen] = useState(false);
-  const { cartItems, updateQuantity } = useCartContext();
+interface CartProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Cart({ isOpen, onClose }: CartProps) {
+  const { cartItems, updateQuantity, removeFromCart } = useCartContext();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (cartItems.length === 0) return;
+      
+      setLoading(true);
+      try {
+        const productPromises = cartItems.map(async (item) => {
+          const response = await fetch(`/api/products/${item.id}`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch product');
+          }
+          return response.json();
+        });
+
+        const productsData = await Promise.all(productPromises);
+        setProducts(productsData);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [cartItems]);
 
   const totalPrice = cartItems.reduce(
     (total, item) => total + item.price * item.quantity,
@@ -18,7 +51,7 @@ export default function Cart() {
       className={`fixed inset-0 transition-opacity z-50 ${
         isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
       } bg-black bg-opacity-50`}
-      onClick={() => setIsOpen(false)}
+      onClick={onClose}
     >
       <div
         className={`absolute right-0 top-0 h-full w-96 bg-white shadow-lg transform transition-transform ${
@@ -29,7 +62,7 @@ export default function Cart() {
         <div className="flex justify-between items-center p-4 border-b z-50 relative z-50">
           <h2 className="text-xl font-semibold">Shopping Cart</h2>
           <button
-            onClick={() => setIsOpen(false)}
+            onClick={onClose}
             className="text-gray-600 hover:text-gray-900 z-50 "
           >
             <svg
@@ -49,50 +82,63 @@ export default function Cart() {
           </button>
         </div>
 
-        <div className="p-4">
+        <div className="p-4 h-[calc(100vh-200px)] overflow-y-auto">
           {cartItems.length === 0 ? (
             <p className="text-gray-600">您的购物车是空的</p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 pb-4">
               {cartItems.map((item) => (
                 <div key={item.id} className="flex items-center space-x-4">
-                  <Image
-                    src={item.image}
-                    alt={item.name}
-                    width={64}
-                    height={64}
-                    className="object-cover rounded"
-                  />
+                  {loading ? (
+                    <div className="w-16 h-16 bg-gray-200 animate-pulse rounded" />
+                  ) : (
+                    <Image
+                      src={products.find(p => p.id === item.id)?.image_url || '/placeholder.jpg'}
+                      alt={item.name}
+                      width={64}
+                      height={64}
+                      className="object-cover rounded"
+                    />
+                  )}
                   <div className="flex-1">
                     <h3 className="font-medium">{item.name}</h3>
                     <p className="text-gray-600">${item.price}</p>
                   </div>
-                  <div className="flex flex-col items-center">
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => {
-                        const quantity = parseInt(e.target.value);
-                        if (quantity > 0) {
-                          updateQuantity(item.id, quantity);
-                        }
-                      }}
-                      className="w-16 px-2 py-1 border rounded mb-2"
-                      id={`quantity-input-${item.id}`}
-                    />
+                  <div className="flex flex-col items-center space-y-2 z-50 relative">
+                    <div className="flex items-center space-x-2 z-50">
+                      <button
+                        className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        min="0"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const quantity = parseInt(e.target.value);
+                          if (quantity > 0) {
+                            updateQuantity(item.id, quantity);
+                          }
+                        }}
+                        className="w-16 px-2 py-1 border rounded text-center"
+                        id={`quantity-input-${item.id}`}
+                      />
+                      <button
+                        className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      >
+                        +
+                      </button>
+                    </div>
                     <button
-                      className="bg-blue-500 text-white py-1 px-2 rounded text-sm hover:bg-blue-600 transition-colors"
-                      onClick={() => {
-                        const quantityInput = document.querySelector(`#quantity-input-${item.id}`) as HTMLInputElement;
-                        const quantity = parseInt(quantityInput.value);
-                        if (quantity > 0) {
-                          updateQuantity(item.id, quantity);
-                        }
-                      }}
+                      className="text-red-500 hover:text-red-700 text-sm"
+                      onClick={() => removeFromCart(item.id)}
                     >
-                      更新
+                      delete
                     </button>
+                    <p className="text-xs text-gray-500">ID: {item.id}</p>
                   </div>
                 </div>
               ))}
@@ -100,7 +146,7 @@ export default function Cart() {
           )}
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
+        <div className="fixed bottom-0 left-0 right-0 p-4 border-t bg-white" style={{ width: '384px' }}>
           <div className="flex justify-between items-center mb-4">
             <span className="font-medium">总计：</span>
             <span className="text-xl font-semibold">${totalPrice.toFixed(2)}</span>
