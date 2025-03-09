@@ -138,7 +138,7 @@ export default function Cart({ isOpen, onClose }: CartProps) {
                     >
                       delete
                     </button>
-                    <p className="text-xs text-gray-500">ID: {item.id}</p>
+                    {/* <p className="text-xs text-gray-500">ID: {item.id}</p> */}
                   </div>
                 </div>
               ))}
