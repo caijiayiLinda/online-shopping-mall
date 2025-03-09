@@ -49,7 +49,7 @@ export default function AdminForm() {
       const formattedProducts = response.data.map((product: any) => ({
         ...product,
         image_url: product.image_url,
-        category_id: product.category_id
+        category_id: product.catid
       }))
       setProducts(formattedProducts)
     } catch (error) {
@@ -159,6 +159,7 @@ export default function AdminForm() {
               price: editingProduct.price,
               description: editingProduct.description,
               image_url: editingProduct.image_url,
+              thumbnail_url: editingProduct.thumbnail_url,
               category_id: editingProduct.category_id.toString()
             }}
             onSubmit={handleUpdateProduct}

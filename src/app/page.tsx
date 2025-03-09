@@ -18,7 +18,9 @@ export default function Home() {
     <Suspense fallback={<Loading />}>
       <Nav categoryId={categoryId}>
         <ProductList categoryId={categoryId} />
-        <Cart />
+        <Cart isOpen={false} onClose={function (): void {
+          throw new Error('Function not implemented.');
+        } } />
       </Nav>
     </Suspense>
   );

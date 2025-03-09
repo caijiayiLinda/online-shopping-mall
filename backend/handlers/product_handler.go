@@ -123,12 +123,12 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	height := bounds.Dy()
 
 	var thumbnailPath string
-	if width <= 500 && height <= 500 {
+	if width <= 300 && height <= 300 {
 		// Use original image as thumbnail if it's small enough
 		thumbnailPath = filePath
 	} else {
 		// Create thumbnail for larger images
-	thumbnail := imaging.Resize(img, 500, 500, imaging.Lanczos)
+	thumbnail := imaging.Resize(img, 300, 300, imaging.Lanczos)
 	thumbnailFilename := "thumbnail_" + newFilename
 	thumbnailPath = filepath.Join("/home/caijiayi/online-shopping-mall/public/images", thumbnailFilename)
 	err = imaging.Save(thumbnail, thumbnailPath)
@@ -193,7 +193,7 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get product ID from URL
-	productID, err := strconv.Atoi(r.URL.Query().Get("pid"))
+	productID, err := strconv.Atoi(r.URL.Query().Get("id"))
 	if err != nil {
 		http.Error(w, "Invalid product ID", http.StatusBadRequest)
 		return
@@ -260,12 +260,12 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	height := bounds.Dy()
 
 	var thumbnailPath string
-	if width <= 500 && height <= 500 {
+	if width <= 300 && height <= 300 {
 		// Use original image as thumbnail if it's small enough
 		thumbnailPath = filepath.Join("/home/caijiayi/online-shopping-mall/public/images", "thumbnail_"+newFilename)
 	} else {
 		// Create thumbnail for larger images
-		thumbnail := imaging.Resize(img, 500, 500, imaging.Lanczos)
+		thumbnail := imaging.Resize(img, 300, 300, imaging.Lanczos)
 		thumbnailPath = filepath.Join("/home/caijiayi/online-shopping-mall/public/images", "thumbnail_"+newFilename)
 		err = imaging.Save(thumbnail, thumbnailPath)
 		if err != nil {
@@ -319,7 +319,7 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 
 func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	// Get product ID from URL
-	productID, err := strconv.Atoi(r.URL.Query().Get("pid"))
+	productID, err := strconv.Atoi(r.URL.Query().Get("id"))
 	if err != nil {
 		http.Error(w, "Invalid product ID", http.StatusBadRequest)
 		return

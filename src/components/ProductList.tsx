@@ -48,11 +48,12 @@ export default function ProductList({ categoryId }: ProductListProps) {
         >
           <Link href={`/products/${product.id}`}>
             <div className="cursor-pointer flex flex-col">
-              <div className="w-full h-48 relative">
+              <div className="w-[300px] h-[300px] relative">
                 <Image
-                  src={product.image_url}
+                  src={product.thumbnail_url}
                   alt={product.name}
-                  fill
+                  width={300}
+                  height={300}
                   className="object-cover"
                 />
               </div>

@@ -93,7 +93,7 @@ export default function Cart({ isOpen, onClose }: CartProps) {
                     <div className="w-16 h-16 bg-gray-200 animate-pulse rounded" />
                   ) : (
                     <Image
-                      src={products.find(p => p.id === item.id)?.image_url || '/placeholder.jpg'}
+                      src={products.find(p => p.id === item.id)?.thumbnail_url || '/placeholder.jpg'}
                       alt={item.name}
                       width={64}
                       height={64}
