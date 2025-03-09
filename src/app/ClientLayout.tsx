@@ -20,7 +20,9 @@ export default function ClientLayout({
           <main className="flex-1">{children}</main>
         </Suspense>
       </div>
-      <Cart />
+      <Cart isOpen={false} onClose={function (): void {
+        throw new Error('Function not implemented.');
+      } } />
     </CartProvider>
   );
 }

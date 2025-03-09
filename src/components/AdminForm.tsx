@@ -8,8 +8,8 @@ import { Product } from '../types'
 interface Category {
   id: number
   name: string
-  createdAt: string
-  updatedAt: string
+  created_at: string
+  updated_at: string
 }
 
 export default function AdminForm() {
@@ -26,11 +26,11 @@ export default function AdminForm() {
     const fetchCategories = async () => {
       try {
         const response = await axios.get('/api/categories')
-        const formattedCategories = response.data.map((category: any) => ({
+        const formattedCategories = response.data.map((category: Category) => ({
           id: category.id,
           name: category.name,
-          createdAt: category.created_at,
-          updatedAt: category.updated_at
+          created_at: category.created_at,
+          updated_at: category.updated_at
         }))
         console.log('Formatted categories:', formattedCategories)
         setCategories(formattedCategories)
@@ -46,7 +46,7 @@ export default function AdminForm() {
   const fetchProducts = async () => {
     try {
       const response = await axios.get('/api/products')
-      const formattedProducts = response.data.map((product: any) => ({
+      const formattedProducts = response.data.map((product: Product & { catid: string }) => ({
         ...product,
         image_url: product.image_url,
         category_id: product.catid
@@ -258,6 +258,7 @@ export default function AdminForm() {
           {products.map((product) => (
             <div key={product.id} className="border p-4 rounded">
               <div className="flex items-center space-x-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img 
                   src={product.image_url} 
                   alt={product.name}

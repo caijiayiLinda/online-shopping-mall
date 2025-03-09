@@ -54,7 +54,7 @@ export default function ProductPage() {
   }
 
   return (
-    <Nav categoryId={product.category_id} product={product.name}>
+    <Nav categoryId={product.category_id} product={product}>
       <main className="max-w-6xl mx-auto py-8 px-4">
         <div className="grid md:grid-cols-2 gap-8">
           <div>

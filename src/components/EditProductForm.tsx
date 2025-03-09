@@ -90,6 +90,7 @@ export default function EditProductForm({ product, onSubmit }: EditProductFormPr
         />
         {image && (
           <div className="mt-2">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={image}
           alt={name}

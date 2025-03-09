@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Product } from '@/types';
 import CartButton from './CartButton';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -12,8 +13,12 @@ const useCategories = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get('/api/categories');
-        const categoryNames = response.data.map((c: any) => c.name);
+        interface Category {
+          id: number;
+          name: string;
+        }
+        const response = await axios.get<Category[]>('/api/categories');
+        const categoryNames = response.data.map((c: Category) => c.name);
         setCategories(categoryNames);
       } catch (error) {
         console.error('Failed to fetch categories:', error);
@@ -27,7 +32,7 @@ const useCategories = () => {
 
 interface NavProps {
   categoryId?: string;
-  product?: string;
+  product?: Product;
   children: React.ReactNode;
 }
 
@@ -94,14 +99,19 @@ const handleCategoryClick = (category: string) => {
         {/* Breadcrumbs */}
         <div className="py-2">
           <Link href="/" className="text-blue-500 hover:underline">Home</Link>
-          {categoryId && categoryId !== '' && (
+          {(categoryId || (typeof product === 'object' && product?.category_id)) && (
             <span className="inline-flex items-center">
               <span className="mx-2">{'>'}</span>
-              <Link href={`/categories/${categoryId.toLowerCase()}`} className="text-blue-500 hover:underline">{categoryId}</Link>
-              {product && product !== '' && (
+              <Link 
+                href={`?categoryId=${(typeof product === 'object' ? product?.category_id : null) || categoryId}`} 
+                className="text-blue-500 hover:underline"
+              >
+                {Object.entries(categoryMap).find(([, id]) => id.toString() === ((typeof product === 'object' ? product?.category_id : null) || categoryId)?.toString())?.[0]}
+              </Link>
+              {typeof product === 'object' && product?.name && (
                 <span className="inline-flex items-center">
                   <span className="mx-2">{'>'}</span>
-                  <span>{product}</span>
+                  <span>{product.name}</span>
                 </span>
               )}
             </span>
