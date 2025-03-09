@@ -54,7 +54,7 @@ export default function ProductPage() {
   }
 
   return (
-    <Nav category={product.category_id} product={product.name}>
+    <Nav categoryId={product.category_id} product={product.name}>
       <main className="max-w-6xl mx-auto py-8 px-4">
         <div className="grid md:grid-cols-2 gap-8">
           <div>
@@ -74,7 +74,9 @@ export default function ProductPage() {
           </div>
         </div>
       </main>
-      <Cart />
+      <Cart isOpen={false} onClose={function (): void {
+        throw new Error('Function not implemented.');
+      } } />
     </Nav>
   );
 }

@@ -84,7 +84,7 @@ export default function Cart({ isOpen, onClose }: CartProps) {
 
         <div className="p-4 h-[calc(100vh-200px)] overflow-y-auto">
           {cartItems.length === 0 ? (
-            <p className="text-gray-600">您的购物车是空的</p>
+            <p className="text-gray-600">Empty Shopping Cart</p>
           ) : (
             <div className="space-y-4 pb-4">
               {cartItems.map((item) => (

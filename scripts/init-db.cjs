@@ -24,6 +24,7 @@ async function initializeDatabase() {
       price DECIMAL(10,2) NOT NULL,
       description TEXT,
       image_url TEXT,
+      thumbnail_url TEXT,
       FOREIGN KEY(catid) REFERENCES categories(catid)
     );
   `);
@@ -35,27 +36,27 @@ async function initializeDatabase() {
   await db.execute(`INSERT INTO categories (name) VALUES ('Beauty')`);
   await db.execute(`INSERT INTO categories (name) VALUES ('Pets')`);
 
-  // Insert products
-  await db.execute(`
-    INSERT INTO products (catid, name, price, description, image_url)
-    VALUES (1, "Women's Plus Pleated Midi Dress", 34.98, 'Material: 100% Polyester', '/images/dress.jpg')
-  `);
-  await db.execute(`
-    INSERT INTO products (catid, name, price, description, image_url)
-    VALUES (2, 'VQJTCVLY Cordless Drill', 35.49, '21 Voltage & 2 Variable Speeds', '/images/drill.jpg')
-  `);
-  await db.execute(`
-    INSERT INTO products (catid, name, price, description, image_url)
-    VALUES (3, 'Hot Wheels Set of 8 Basic Toy Cars & Trucks', 8.88, "It's an instant collection with a set of 8 Hot Wheels, including 1 exclusive vehicle!", '/images/toy.jpg')
-  `);
-  await db.execute(`
-    INSERT INTO products (catid, name, price, description, image_url)
-    VALUES (4, 'Maybelline Super Stay Teddy Tint, Long Lasting Matte Lip Stain', 9.97, "Meet Super Stay Teddy Tint, Maybelline's teddy-soft Lip tint that lasts. Now you can tint Lips in teddy-soft color for a plush, light feel that lasts all day. This no transfer Lipcolor lasts up to 12 hours", '/images/lip.jpg')
-  `);
-  await db.execute(`
-    INSERT INTO products (catid, name, price, description, image_url)
-    VALUES (5, 'Meow Mix Original Choice Dry Cat Food, 16 Pound Bag', 16.98, 'Contains one (1) 16-pound bag of Meow Mix Original Choice Dry Cat Food, now with a new look', '/images/cat_food.jpg')
-  `);
+  // // Insert products
+  // await db.execute(`
+  //   INSERT INTO products (catid, name, price, description, image_url)
+  //   VALUES (1, "Women's Plus Pleated Midi Dress", 34.98, 'Material: 100% Polyester', '/images/dress.jpg')
+  // `);
+  // await db.execute(`
+  //   INSERT INTO products (catid, name, price, description, image_url)
+  //   VALUES (2, 'VQJTCVLY Cordless Drill', 35.49, '21 Voltage & 2 Variable Speeds', '/images/drill.jpg')
+  // `);
+  // await db.execute(`
+  //   INSERT INTO products (catid, name, price, description, image_url)
+  //   VALUES (3, 'Hot Wheels Set of 8 Basic Toy Cars & Trucks', 8.88, "It's an instant collection with a set of 8 Hot Wheels, including 1 exclusive vehicle!", '/images/toy.jpg')
+  // `);
+  // await db.execute(`
+  //   INSERT INTO products (catid, name, price, description, image_url)
+  //   VALUES (4, 'Maybelline Super Stay Teddy Tint, Long Lasting Matte Lip Stain', 9.97, "Meet Super Stay Teddy Tint, Maybelline's teddy-soft Lip tint that lasts. Now you can tint Lips in teddy-soft color for a plush, light feel that lasts all day. This no transfer Lipcolor lasts up to 12 hours", '/images/lip.jpg')
+  // `);
+  // await db.execute(`
+  //   INSERT INTO products (catid, name, price, description, image_url)
+  //   VALUES (5, 'Meow Mix Original Choice Dry Cat Food, 16 Pound Bag', 16.98, 'Contains one (1) 16-pound bag of Meow Mix Original Choice Dry Cat Food, now with a new look', '/images/cat_food.jpg')
+  // `);
 
   console.log('Database initialized successfully');
   await db.end();
