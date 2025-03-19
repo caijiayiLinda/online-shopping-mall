@@ -87,6 +87,10 @@ export default function AdminForm() {
       formData.append('price', updatedProduct.price.toString())
       formData.append('description', updatedProduct.description)
       formData.append('category_id', updatedProduct.category_id.toString())
+      if (image) {
+        formData.append('image', image, image.name)
+      }
+  
       
       await axios.put(`/api/products/update?id=${updatedProduct.id}`, formData, {
         headers: {

@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"backend/handlers"
-
+	"github.com/gin-gonic/gin"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 )
@@ -31,6 +33,9 @@ func main() {
 	// Create database connection string
 	dbConn := fmt.Sprintf("%s:%s@/%s", dbUser, dbPassword, dbName)
 
+	// Initialize Gin router
+	router := gin.Default()
+
 	// Connect to MySQL database
 	db, err := sql.Open("mysql", dbConn)
 	if err != nil {
@@ -44,35 +49,42 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Initialize handlers with logger
+	// Initialize GORM
+	gormDB, err := gorm.Open(mysql.New(mysql.Config{
+		Conn: db,
+	}), &gorm.Config{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Initialize handlers
 	productHandler := &handlers.ProductHandler{DB: db, Logger: log.Default()}
 	categoryHandler := &handlers.CategoryHandler{DB: db, Logger: log.Default()}
+	authHandler := &handlers.AuthHandler{DB: gormDB}
 
 	// Setup routes
-	http.HandleFunc("/products", productHandler.ListProducts)
-	http.HandleFunc("/products/create", productHandler.CreateProduct) 
-	http.HandleFunc("/products/update", productHandler.UpdateProduct)
-	http.HandleFunc("/products/delete", productHandler.DeleteProduct)
-	http.HandleFunc("/products/", productHandler.GetProduct)
-	http.HandleFunc("/products/category", productHandler.GetProductsByCategoryID)
-	http.HandleFunc("/categories", categoryHandler.ListCategories)
-	http.HandleFunc("/categories/id", categoryHandler.GetCategoryIDByName)
-	http.HandleFunc("/categories/create", categoryHandler.CreateCategory)
-	http.HandleFunc("/categories/update", categoryHandler.UpdateCategory)
-	http.HandleFunc("/categories/delete", categoryHandler.DeleteCategory)
-	http.HandleFunc("/categories/", categoryHandler.GetCategory)
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+	router.POST("/login", authHandler.Login)
+	router.POST("/logout", authHandler.Logout)
+	router.GET("/products", productHandler.ListProducts)
+	router.POST("/products/create", productHandler.CreateProduct)
+	router.PUT("/products/update", productHandler.UpdateProduct)
+	router.DELETE("/products/delete", productHandler.DeleteProduct)
+	router.GET("/products/:id", productHandler.GetProduct)
+	router.GET("/products/category", productHandler.GetProductsByCategoryID)
+	router.GET("/categories", categoryHandler.ListCategories)
+	router.GET("/categories/id", categoryHandler.GetCategoryIDByName)
+	router.POST("/categories/create", categoryHandler.CreateCategory)
+	router.PUT("/categories/update", categoryHandler.UpdateCategory)
+	router.DELETE("/categories/delete", categoryHandler.DeleteCategory)
+	router.GET("/categories/:id", categoryHandler.GetCategory)
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "OK"})
 	})
-
-	// Chain middleware and handle root route
-	http.Handle("/", logRequest(cors(http.DefaultServeMux)))
 
 	// Start server with graceful shutdown
 	server := &http.Server{
 		Addr:    ":8080",
-		Handler: nil,
+		Handler: router,
 	}
 
 	go func() {
@@ -97,33 +109,4 @@ func main() {
 	log.Println("Server stopped gracefully")
 }
 
-// logRequest middleware logs incoming requests
-func logRequest(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Skip logging for multipart requests to avoid consuming request body
-		if r.Header.Get("Content-Type") == "multipart/form-data" {
-			log.Printf("Request: %s %s [multipart]", r.Method, r.URL.Path)
-		} else {
-			log.Printf("Request: %s %s", r.Method, r.URL.Path)
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-// cors middleware adds CORS headers
-func cors(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Content-Length, X-Requested-With")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Max-Age", "86400")
-		
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		
-		next.ServeHTTP(w, r)
-	})
-}
+// Middleware functions would go here...

@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"github.com/disintegration/imaging"
+	"github.com/gin-gonic/gin"
 	"backend/models"
 )
 
@@ -23,55 +23,55 @@ type ProductHandler struct {
 	Logger *log.Logger
 }
 
-func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
+func (h *ProductHandler) CreateProduct(c *gin.Context) {
 	// Log request details
 	h.Logger.Printf("CreateProduct request received")
-	h.Logger.Printf("Request Headers: %v", r.Header)
-	h.Logger.Printf("Request Form Data: %v", r.Form)
+	h.Logger.Printf("Request Headers: %v", c.Request.Header)
 
 	// Parse multipart form
-	err := r.ParseMultipartForm(10 << 20) // 10MB
+	form, err := c.MultipartForm()
 	if err != nil {
 		h.Logger.Printf("Error parsing form: %v", err)
-		http.Error(w, "Unable to parse form", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to parse form"})
 		return
 	}
 
 	// Get form values
-	categoryID, err := strconv.Atoi(r.FormValue("category_id"))
+	categoryID, err := strconv.Atoi(form.Value["category_id"][0])
 	if err != nil {
-		http.Error(w, "Invalid category ID", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID"})
 		return
 	}
 
-	name := r.FormValue("name")
-	price, err := strconv.ParseFloat(r.FormValue("price"), 64)
+	name := form.Value["name"][0]
+	price, err := strconv.ParseFloat(form.Value["price"][0], 64)
 	if err != nil {
-		http.Error(w, "Invalid price", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid price"})
 		return
 	}
 
-	description := r.FormValue("description")
+	description := form.Value["description"][0]
 
 	// Handle file upload
 	h.Logger.Printf("Attempting to get uploaded file from form-data")
-	file, handler, err := r.FormFile("image")
+	fileHeader, err := c.FormFile("image")
 	if err != nil {
 		h.Logger.Printf("Error getting uploaded file: %v", err)
-		http.Error(w, fmt.Sprintf("Unable to get file: %v", err), http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Unable to get file: %v", err)})
 		return
 	}
+	file, err := fileHeader.Open()
 	defer file.Close()
-	h.Logger.Printf("Successfully received file: %s (%d bytes)", handler.Filename, handler.Size)
+	h.Logger.Printf("Successfully received file: %s (%d bytes)", fileHeader.Filename, fileHeader.Size)
 
 	// Create unique filename
-	ext := filepath.Ext(handler.Filename)
+	ext := filepath.Ext(fileHeader.Filename)
 	newFilename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
 
 	// Ensure images directory exists
 	if err := os.MkdirAll("/home/caijiayi/online-shopping-mall/public/images", 0755); err != nil {
 		h.Logger.Printf("Error creating images directory: %v", err)
-		http.Error(w, "Failed to create images directory", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create images directory"})
 		return
 	}
 
@@ -80,7 +80,7 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	dst, err := os.Create(filePath)
 	if err != nil {
 		h.Logger.Printf("Error creating file %s: %v", filePath, err)
-		http.Error(w, "Unable to save file", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to save file"})
 		return
 	}
 	defer dst.Close()
@@ -89,13 +89,13 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
 		h.Logger.Printf("Error reading file: %v", err)
-		http.Error(w, "Unable to read file", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to read file"})
 		return
 	}
 
 	if _, err := dst.Write(fileBytes); err != nil {
 		h.Logger.Printf("Error writing file: %v", err)
-		http.Error(w, "Unable to save file", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to save file"})
 		return
 	}
 
@@ -104,7 +104,7 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	h.Logger.Printf("Detected file content type: %s", contentType)
 	if !strings.Contains(contentType, "image/") {
 		h.Logger.Printf("Invalid file type: %s", contentType)
-		http.Error(w, fmt.Sprintf("Invalid file type: %s. Only image files are allowed.", contentType), http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid file type: %s. Only image files are allowed.", contentType)})
 		return
 	}
 
@@ -113,7 +113,7 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	img, err := imaging.Decode(bytes.NewReader(fileBytes))
 	if err != nil {
 		h.Logger.Printf("Failed to decode image: %v", err)
-		http.Error(w, "The image file appears to be corrupted or in an unsupported format. Please try with a valid JPG, PNG or GIF image.", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "The image file appears to be corrupted or in an unsupported format. Please try with a valid JPG, PNG or GIF image."})
 		return
 	}
 	h.Logger.Printf("Successfully decoded image, dimensions: %dx%d", img.Bounds().Dx(), img.Bounds().Dy())
@@ -134,7 +134,7 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	err = imaging.Save(thumbnail, thumbnailPath)
 	if err != nil {
 		h.Logger.Printf("Error saving thumbnail: %v", err)
-		http.Error(w, "Unable to save thumbnail", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to save thumbnail"})
 		return
 	}
 	h.Logger.Printf("Successfully created thumbnail: %s", thumbnailFilename)
@@ -151,7 +151,7 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	query := `INSERT INTO products (catid, name, price, description, image_url, thumbnail_url) VALUES (?, ?, ?, ?, ?, ?)`
 	result, err := h.DB.Exec(query, categoryID, name, price, description, imageURL, thumbnailURL)
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 	h.Logger.Print(result)
@@ -159,7 +159,7 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	// Get inserted product ID
 	productID, err := result.LastInsertId()
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
@@ -176,60 +176,62 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 
 	// Log successful response
 	h.Logger.Printf("Successfully created product: %+v", product)
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(product); err != nil {
-		h.Logger.Printf("Error encoding response: %v", err)
-		http.Error(w, "Error creating response", http.StatusInternalServerError)
-	}
+	c.JSON(http.StatusOK, product)
 }
 
-func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
-	// Parse form
-	err := r.ParseMultipartForm(10 << 20) // 10MB
+func (h *ProductHandler) UpdateProduct(c *gin.Context) {
+	// Get product ID from URL
+	productID, err := strconv.Atoi(c.Query("id"))
 	if err != nil {
-		http.Error(w, "Unable to parse form", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
 		return
 	}
 
-	// Get product ID from URL
-	productID, err := strconv.Atoi(r.URL.Query().Get("id"))
+	// Parse multipart form
+	form, err := c.MultipartForm()
 	if err != nil {
-		http.Error(w, "Invalid product ID", http.StatusBadRequest)
+		h.Logger.Printf("Error parsing form: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to parse form"})
 		return
 	}
 
 	// Get form values
-	categoryID, err := strconv.Atoi(r.FormValue("category_id"))
+	categoryID, err := strconv.Atoi(form.Value["category_id"][0])
 	if err != nil {
-		http.Error(w, "Invalid category ID", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID"})
 		return
 	}
 
-	name := r.FormValue("name")
-	price, err := strconv.ParseFloat(r.FormValue("price"), 64)
+	name := form.Value["name"][0]
+	price, err := strconv.ParseFloat(form.Value["price"][0], 64)
 	if err != nil {
-		http.Error(w, "Invalid price", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid price"})
 		return
 	}
 
-	description := r.FormValue("description")
+	description := form.Value["description"][0]
 
 	// Handle file upload if exists
 	var newFilename string
-	file, handler, err := r.FormFile("image")
+	fileHeader, err := c.FormFile("image")
 	if err == nil {
+		file, err := fileHeader.Open()
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Unable to open file: %v", err)})
+			return
+		}
 		defer file.Close()
 
 		// Create unique filename
-		ext := filepath.Ext(handler.Filename)
+		ext := filepath.Ext(fileHeader.Filename)
 		newFilename = fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
 
 		// Save original file
-		dst, err := os.Create(filepath.Join("/home/caijiayi/online-shopping-mall/public/images", "original_"+newFilename))
+		filePath := filepath.Join("/home/caijiayi/online-shopping-mall/public/images", "original_"+newFilename)
+		dst, err := os.Create(filePath)
 		if err != nil {
 			h.Logger.Printf("Error creating file: %v", err)
-			http.Error(w, "Unable to save file", http.StatusInternalServerError)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to save file"})
 			return
 		}
 		defer dst.Close()
@@ -238,41 +240,43 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		fileBytes, err := io.ReadAll(file)
 		if err != nil {
 			h.Logger.Printf("Error reading file: %v", err)
-			http.Error(w, "Unable to read file", http.StatusInternalServerError)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to read file"})
 			return
 		}
 
 		if _, err := dst.Write(fileBytes); err != nil {
 			h.Logger.Printf("Error writing file: %v", err)
-			http.Error(w, "Unable to save file", http.StatusInternalServerError)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to save file"})
 			return
 		}
 
 		// Decode image from memory
 		img, err := imaging.Decode(bytes.NewReader(fileBytes))
-	if err != nil {
-		http.Error(w, "Unable to process image", http.StatusInternalServerError)
-		return
-	}
-
-	bounds := img.Bounds()
-	width := bounds.Dx()
-	height := bounds.Dy()
-
-	var thumbnailPath string
-	if width <= 300 && height <= 300 {
-		// Use original image as thumbnail if it's small enough
-		thumbnailPath = filepath.Join("/home/caijiayi/online-shopping-mall/public/images", "thumbnail_"+newFilename)
-	} else {
-		// Create thumbnail for larger images
-		thumbnail := imaging.Resize(img, 300, 300, imaging.Lanczos)
-		thumbnailPath = filepath.Join("/home/caijiayi/online-shopping-mall/public/images", "thumbnail_"+newFilename)
-		err = imaging.Save(thumbnail, thumbnailPath)
 		if err != nil {
-			http.Error(w, "Unable to save thumbnail", http.StatusInternalServerError)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to process image"})
 			return
 		}
-	}
+
+		bounds := img.Bounds()
+		width := bounds.Dx()
+		height := bounds.Dy()
+
+		var thumbnailPath string
+		if width <= 300 && height <= 300 {
+			// Use original image as thumbnail if it's small enough
+			thumbnailPath = filePath
+		} else {
+			// Create thumbnail for larger images
+			thumbnail := imaging.Resize(img, 300, 300, imaging.Lanczos)
+			thumbnailFilename := "thumbnail_" + newFilename
+			thumbnailPath = filepath.Join("/home/caijiayi/online-shopping-mall/public/images", thumbnailFilename)
+			err = imaging.Save(thumbnail, thumbnailPath)
+			if err != nil {
+				h.Logger.Printf("Error saving thumbnail: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to save thumbnail"})
+				return
+			}
+		}
 	}
 
 	// Update product in database
@@ -287,22 +291,22 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
 	if rowsAffected == 0 {
-		http.Error(w, "Product not found", http.StatusNotFound)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 		return
 	}
 
-	// Return updated product with full image URL path
+	// Return updated product with full image URLs
 	product := models.Product{
 		ID:          productID,
 		CategoryID:  categoryID,
@@ -313,15 +317,14 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		ThumbnailURL: "/images/thumbnail_" + newFilename,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(product)
+	c.JSON(http.StatusOK, product)
 }
 
-func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
+func (h *ProductHandler) DeleteProduct(c *gin.Context) {
 	// Get product ID from URL
-	productID, err := strconv.Atoi(r.URL.Query().Get("id"))
+	productID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid product ID", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
 		return
 	}
 
@@ -329,29 +332,29 @@ func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	query := `DELETE FROM products WHERE pid = ?`
 	result, err := h.DB.Exec(query, productID)
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
 	if rowsAffected == 0 {
-		http.Error(w, "Product not found", http.StatusNotFound)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	c.Status(http.StatusNoContent)
 }
 
-func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
+func (h *ProductHandler) GetProduct(c *gin.Context) {
 	// Get product ID from URL
-	productID, err := strconv.Atoi(r.URL.Path[len("/products/"):])
+	productID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid product ID", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
 		return
 	}
 
@@ -361,27 +364,26 @@ func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
 	err = row.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Price, &p.Description, &p.ImageURL, &p.ThumbnailURL)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "Product not found", http.StatusNotFound)
+			c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 			return
 		}
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(p)
+	c.JSON(http.StatusOK, p)
 }
 
-func (h *ProductHandler) GetProductsByCategoryID(w http.ResponseWriter, r *http.Request) {
-	categoryID, err := strconv.Atoi(r.URL.Query().Get("category_id"))
+func (h *ProductHandler) GetProductsByCategoryID(c *gin.Context) {
+	categoryID, err := strconv.Atoi(c.Query("category_id"))
 	if err != nil {
-		http.Error(w, "Invalid category ID", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID"})
 		return
 	}
 
 	rows, err := h.DB.Query("SELECT * FROM products WHERE catid = ?", categoryID)
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 	defer rows.Close()
@@ -391,27 +393,28 @@ func (h *ProductHandler) GetProductsByCategoryID(w http.ResponseWriter, r *http.
 		var p models.Product
 		err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Price, &p.Description, &p.ImageURL, &p.ThumbnailURL)
 		if err != nil {
-			http.Error(w, "Database error", http.StatusInternalServerError)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 			return
 		}
 		products = append(products, p)
 	}
 
 	if err = rows.Err(); err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(products)
+	c.JSON(http.StatusOK, products)
 }
 
-func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
+func (h *ProductHandler) ListProducts(c *gin.Context) {
 	h.Logger.Printf("Handling ListProducts request")
+	
 	// Query products from database
 	rows, err := h.DB.Query("SELECT pid, catid, name, price, description, image_url, thumbnail_url FROM products")
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		h.Logger.Printf("Database error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 	defer rows.Close()
@@ -421,17 +424,18 @@ func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 		var p models.Product
 		err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Price, &p.Description, &p.ImageURL, &p.ThumbnailURL)
 		if err != nil {
-			http.Error(w, "Database error", http.StatusInternalServerError)
+			h.Logger.Printf("Database scan error: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 			return
 		}
 		products = append(products, p)
 	}
 
 	if err = rows.Err(); err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		h.Logger.Printf("Database rows error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(products)
+	c.JSON(http.StatusOK, products)
 }

@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
 	"backend/models"
 )
 
@@ -15,19 +15,19 @@ type CategoryHandler struct {
 	Logger *log.Logger
 }
 
-func (h *CategoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
-	name := r.FormValue("name")
+func (h *CategoryHandler) CreateCategory(c *gin.Context) {
+	name := c.PostForm("name")
 
 	query := `INSERT INTO categories (name) VALUES (?)`
 	result, err := h.DB.Exec(query, name)
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
 	categoryID, err := result.LastInsertId()
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
@@ -36,34 +36,33 @@ func (h *CategoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request)
 		Name: name,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(category)
+	c.JSON(http.StatusOK, category)
 }
 
-func (h *CategoryHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
-	categoryID, err := strconv.Atoi(r.URL.Query().Get("id"))
+func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
+	categoryID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid category ID", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID"})
 		return
 	}
 
-	name := r.FormValue("name")
+	name := c.PostForm("name")
 
 	query := `UPDATE categories SET name = ? WHERE catid = ?`
 	result, err := h.DB.Exec(query, name, categoryID)
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
 	if rowsAffected == 0 {
-		http.Error(w, "Category not found", http.StatusNotFound)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Category not found"})
 		return
 	}
 
@@ -72,42 +71,41 @@ func (h *CategoryHandler) UpdateCategory(w http.ResponseWriter, r *http.Request)
 		Name: name,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(category)
+	c.JSON(http.StatusOK, category)
 }
 
-func (h *CategoryHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
-	categoryID, err := strconv.Atoi(r.URL.Query().Get("id"))
+func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
+	categoryID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid category ID", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID"})
 		return
 	}
 
 	query := `DELETE FROM categories WHERE catid = ?`
 	result, err := h.DB.Exec(query, categoryID)
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
 	if rowsAffected == 0 {
-		http.Error(w, "Category not found", http.StatusNotFound)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Category not found"})
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	c.Status(http.StatusNoContent)
 }
 
-func (h *CategoryHandler) GetCategoryIDByName(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Query().Get("name")
+func (h *CategoryHandler) GetCategoryIDByName(c *gin.Context) {
+	name := c.Query("name")
 	if name == "" {
-		http.Error(w, "name is required", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
 		return
 	}
 
@@ -115,21 +113,20 @@ func (h *CategoryHandler) GetCategoryIDByName(w http.ResponseWriter, r *http.Req
 	err := h.DB.QueryRow("SELECT catid FROM categories WHERE name = ?", name).Scan(&categoryID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "Category not found", http.StatusNotFound)
+			c.JSON(http.StatusNotFound, gin.H{"error": "Category not found"})
 			return
 		}
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]int{"category_id": categoryID})
+	c.JSON(http.StatusOK, gin.H{"category_id": categoryID})
 }
 
-func (h *CategoryHandler) GetCategory(w http.ResponseWriter, r *http.Request) {
-	categoryID, err := strconv.Atoi(r.URL.Query().Get("id"))
+func (h *CategoryHandler) GetCategory(c *gin.Context) {
+	categoryID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid category ID", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID"})
 		return
 	}
 
@@ -137,42 +134,40 @@ func (h *CategoryHandler) GetCategory(w http.ResponseWriter, r *http.Request) {
 	err = h.DB.QueryRow("SELECT catid, name FROM categories WHERE catid = ?", categoryID).Scan(&category.ID, &category.Name)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "Category not found", http.StatusNotFound)
+			c.JSON(http.StatusNotFound, gin.H{"error": "Category not found"})
 		} else {
-			http.Error(w, "Database error", http.StatusInternalServerError)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(category)
+	c.JSON(http.StatusOK, category)
 }
 
-func (h *CategoryHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
+func (h *CategoryHandler) ListCategories(c *gin.Context) {
 	h.Logger.Printf("Handling ListCategories request")
 	rows, err := h.DB.Query("SELECT catid, name FROM categories")
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 	defer rows.Close()
 
 	var categories []models.Category
 	for rows.Next() {
-		var c models.Category
-		err := rows.Scan(&c.ID, &c.Name)
+		var category models.Category
+		err := rows.Scan(&category.ID, &category.Name)
 		if err != nil {
-			http.Error(w, "Database error", http.StatusInternalServerError)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 			return
 		}
-		categories = append(categories, c)
+		categories = append(categories, category)
 	}
 
 	if err = rows.Err(); err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(categories)
+	c.JSON(http.StatusOK, categories)
 }
