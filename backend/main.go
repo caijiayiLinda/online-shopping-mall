@@ -62,21 +62,29 @@ func main() {
 	categoryHandler := &handlers.CategoryHandler{DB: db, Logger: log.Default()}
 	authHandler := &handlers.AuthHandler{DB: gormDB}
 
-	// Setup routes
-	router.POST("/login", authHandler.Login)
-	router.POST("/logout", authHandler.Logout)
-	router.GET("/products", productHandler.ListProducts)
-	router.POST("/products/create", productHandler.CreateProduct)
-	router.PUT("/products/update", productHandler.UpdateProduct)
-	router.DELETE("/products/delete", productHandler.DeleteProduct)
-	router.GET("/products/:id", productHandler.GetProduct)
-	router.GET("/products/category", productHandler.GetProductsByCategoryID)
-	router.GET("/categories", categoryHandler.ListCategories)
-	router.GET("/categories/id", categoryHandler.GetCategoryIDByName)
-	router.POST("/categories/create", categoryHandler.CreateCategory)
-	router.PUT("/categories/update", categoryHandler.UpdateCategory)
-	router.DELETE("/categories/delete", categoryHandler.DeleteCategory)
-	router.GET("/categories/:id", categoryHandler.GetCategory)
+  // Setup routes
+  router.POST("/login", authHandler.Login)
+  router.POST("/logout", authHandler.Logout)
+  
+  // Protected routes
+  adminGroup := router.Group("/admin")
+  adminGroup.Use(authHandler.AdminAuthMiddleware())
+  {
+    adminGroup.POST("/products/create", productHandler.CreateProduct)
+    adminGroup.PUT("/products/update", productHandler.UpdateProduct)
+    adminGroup.DELETE("/products/delete", productHandler.DeleteProduct)
+    adminGroup.POST("/categories/create", categoryHandler.CreateCategory)
+    adminGroup.PUT("/categories/update", categoryHandler.UpdateCategory)
+    adminGroup.DELETE("/categories/delete", categoryHandler.DeleteCategory)
+  }
+
+  // Public routes
+  router.GET("/products", productHandler.ListProducts)
+  router.GET("/products/:id", productHandler.GetProduct)
+  router.GET("/products/category", productHandler.GetProductsByCategoryID)
+  router.GET("/categories", categoryHandler.ListCategories)
+  router.GET("/categories/id", categoryHandler.GetCategoryIDByName)
+  router.GET("/categories/:id", categoryHandler.GetCategory)
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})
 	})

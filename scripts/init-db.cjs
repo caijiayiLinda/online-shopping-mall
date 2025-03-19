@@ -28,6 +28,14 @@ async function initializeDatabase() {
       FOREIGN KEY(catid) REFERENCES categories(catid)
     );
   `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      email TEXT NOT NULL,
+      password TEXT,
+      admin BOOL
+    );
+  `);
 
   // Insert categories
   await db.execute(`INSERT INTO categories (name) VALUES ('Clothing')`);
@@ -36,6 +44,15 @@ async function initializeDatabase() {
   await db.execute(`INSERT INTO categories (name) VALUES ('Beauty')`);
   await db.execute(`INSERT INTO categories (name) VALUES ('Pets')`);
 
+  // Insert users
+  await db.execute(`
+    INSERT INTO users (id, email, password, admin) VALUES (1, "1155229013@link.cuhk.edu.hk", "1155229013", 1)
+    `);
+
+  // await db.execute(`
+  //   //   INSERT INTO users (id, email, password, admin_flag)
+  //   //   VALUES (2, "", "1155229013", 0)
+  //   // `);  
   // // Insert products
   // await db.execute(`
   //   INSERT INTO products (catid, name, price, description, image_url)
