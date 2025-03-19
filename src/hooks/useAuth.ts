@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 export function useAuth() {
@@ -9,11 +10,7 @@ export function useAuth() {
   const [csrfToken, setCsrfToken] = useState('');
   const router = useRouter();
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/check', {
         credentials: 'include',
@@ -46,7 +43,11 @@ export function useAuth() {
     } catch (error) {
       console.error('Auth check failed:', error);
     }
-  };
+  }, [csrfToken]);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const login = async (email: string, password: string) => {
     try {

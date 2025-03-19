@@ -2,15 +2,12 @@
 
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { useRouter } from 'next/navigation';
-
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,8 +18,8 @@ export default function LoginForm() {
       const response = await login(email, password);
       
       if (!response.ok) {
-        const errorData = await response.json();
-        if (response.status === 429) {
+      await response.json();
+      if (response.status === 429) {
           setError('Too many attempts. Please try again later.');
         } else if (response.status === 401) {
           setError('Invalid email or password');
@@ -31,7 +28,7 @@ export default function LoginForm() {
         }
         return;
       }
-    } catch (error) {
+    } catch {
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
