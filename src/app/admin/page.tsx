@@ -1,27 +1,37 @@
 'use client';
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import AdminForm from '@/components/AdminForm'
-import ChangePasswordForm from '@/components/ChangePasswordForm'
 
 export default function AdminPage() {
   const { isAuthenticated, isAdmin, checkAuth } = useAuth()
   const router = useRouter()
 
+  console.log('AdminPage auth state:', { isAuthenticated, isAdmin })
+
+  const [initialCheckDone, setInitialCheckDone] = useState(false)
+
   useEffect(() => {
+    console.log('AdminPage useEffect triggered')
     checkAuth().then(() => {
-      if (!isAuthenticated) {
-        router.push('/login?from=/admin')
-      } else if (!isAdmin) {
-        alert('当前用户无管理权限')
-        router.push('/login?from=/admin')
-      }
+      console.log('AdminPage checkAuth completed', { isAuthenticated, isAdmin })
+      setInitialCheckDone(true)
     })
-  }, [isAuthenticated, isAdmin, checkAuth, router])
+  }, [checkAuth])
+
+  useEffect(() => {
+    if (!initialCheckDone) return
+    
+    if (!isAuthenticated) {
+      console.log('AdminPage redirecting to login')
+      router.push('/login?from=/admin')
+    }
+  }, [isAuthenticated, initialCheckDone, router])
 
   if (!isAuthenticated || !isAdmin) {
+    console.log('AdminPage rendering null (not authenticated or not admin)')
     return null // 防止页面闪烁
   }
 
@@ -35,10 +45,6 @@ export default function AdminPage() {
           <AdminForm />
         </div>
         
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Change Password</h2>
-          <ChangePasswordForm />
-        </div>
       </div>
     </div>
   )

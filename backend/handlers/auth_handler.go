@@ -3,6 +3,7 @@ package handlers
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -196,10 +197,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// Generate new CSRF token
 	newCsrfToken := generateSecureToken()
 	
-	// Set auth cookie
-	c.SetCookie(authCookieName, tokenString, int(cookieExpiry.Seconds()), "/", "", true, true)
+	// Set auth cookie with proper domain and secure settings
+	domain := ""
+	if os.Getenv("ENV") == "production" {
+		domain = os.Getenv("DOMAIN")
+	}
+	c.SetCookie(authCookieName, tokenString, int(cookieExpiry.Seconds()), "/", domain, os.Getenv("ENV") == "production", true)
 	// Set CSRF cookie
-	c.SetCookie("csrf_token", newCsrfToken, int(cookieExpiry.Seconds()), "/", "", false, true)
+	c.SetCookie("csrf_token", newCsrfToken, int(cookieExpiry.Seconds()), "/", domain, os.Getenv("ENV") == "production", true)
 	
 	c.JSON(http.StatusOK, gin.H{
 		"message":    "Login successful",
@@ -364,7 +369,11 @@ func (h *AuthHandler) CheckAuth(c *gin.Context) {
 	// Get auth token from cookie
 	tokenString, err := c.Cookie(authCookieName)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"authenticated": false})
+		log.Printf("INFO: CheckAuth - No auth cookie found")
+		c.JSON(http.StatusOK, gin.H{
+			"authenticated": false,
+			"error":         "No auth cookie found",
+		})
 		return
 	}
 
@@ -374,18 +383,36 @@ func (h *AuthHandler) CheckAuth(c *gin.Context) {
 		return getJWTSecret(), nil
 	})
 
-	if err != nil || !token.Valid {
-		c.JSON(http.StatusOK, gin.H{"authenticated": false})
+	if err != nil {
+		log.Printf("WARN: CheckAuth - Invalid token: %v", err)
+		c.JSON(http.StatusOK, gin.H{
+			"authenticated": false,
+			"error":         "Invalid token: " + err.Error(),
+		})
+		return
+	}
+
+	if !token.Valid {
+		log.Printf("INFO: CheckAuth - Expired token")
+		c.JSON(http.StatusOK, gin.H{
+			"authenticated": false,
+			"error":         "Expired token",
+		})
 		return
 	}
 
 	// Get user from database
 	var user models.User
 	if err := h.DB.First(&user, claims.UserID).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"authenticated": false})
+		log.Printf("ERROR: CheckAuth - User not found: %v", err)
+		c.JSON(http.StatusOK, gin.H{
+			"authenticated": false,
+			"error":         "User not found: " + err.Error(),
+		})
 		return
 	}
 
+	
 	c.JSON(http.StatusOK, gin.H{
 		"authenticated": true,
 		"admin":         user.Admin,

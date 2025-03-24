@@ -95,11 +95,10 @@ export default function AdminForm() {
       }
   
       
-      const url = new URL('/api/products/update', window.location.origin)
-      url.searchParams.set('id', updatedProduct.id)
-      await axios.put(url.toString(), formData, {
+      await axios.post(`/api/products/update/${updatedProduct.id}`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json'
         }
       })
       toast.success('产品更新成功')

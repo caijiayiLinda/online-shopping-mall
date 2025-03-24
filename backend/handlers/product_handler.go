@@ -180,8 +180,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 }
 
 func (h *ProductHandler) UpdateProduct(c *gin.Context) {
-	// Get product ID from URL
-	productID, err := strconv.Atoi(c.Query("id"))
+	productID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
 		return
@@ -359,7 +358,7 @@ func (h *ProductHandler) GetProduct(c *gin.Context) {
 	}
 
 	// Query product from database
-	row := h.DB.QueryRow("SELECT * FROM products WHERE pid = ?", productID)
+	row := h.DB.QueryRow("SELECT * FROM products WHERE id = ?", productID)
 	var p models.Product
 	err = row.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Price, &p.Description, &p.ImageURL, &p.ThumbnailURL)
 	if err != nil {
@@ -411,7 +410,7 @@ func (h *ProductHandler) ListProducts(c *gin.Context) {
 	h.Logger.Printf("Handling ListProducts request")
 	
 	// Query products from database
-	rows, err := h.DB.Query("SELECT pid, catid, name, price, description, image_url, thumbnail_url FROM products")
+	rows, err := h.DB.Query("SELECT id, catid, name, price, description, image_url, thumbnail_url FROM products")
 	if err != nil {
 		h.Logger.Printf("Database error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})

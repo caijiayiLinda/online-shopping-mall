@@ -38,10 +38,15 @@ export function useAuth() {
       }
 
       const data = await response.json();
-      setIsAuthenticated(data.authenticated);
-      setIsAdmin(data.admin || false);
+      console.log('Auth check response:', {
+        authenticated: data.authenticated,
+        admin: data.admin,
+        email: data.email,
+        userId: data.userId
+      });
+      setIsAuthenticated(data.authenticated === true);
+      setIsAdmin(data.admin === true);
       setUserEmail(data.email || '');
-      console.log('Auth check:', data); // Debug log
     } catch (error) {
       console.error('Auth check failed:', error);
       setIsAuthenticated(false);
@@ -55,6 +60,7 @@ export function useAuth() {
   }, [checkAuth, getCSRFToken]);
 
   const register = async (email: string, password: string, confirmPassword: string, csrfToken: string, from: string) => {
+    console.log('Register attempt:', { email, from });
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -74,10 +80,10 @@ export function useAuth() {
         // Handle redirect based on login source and admin status
         if (data.admin) {
           router.push('/admin');
-        } else if (from.startsWith('/admin')) {
+        } else if (from === '/login' || from === '/admin/login') {
           router.push('/');
         } else {
-          router.push(from === '/login' ? '/' : from);
+          router.push(from);
         }
       }
       return response;
@@ -88,6 +94,7 @@ export function useAuth() {
   };
 
   const login = async (email: string, password: string, csrfToken: string, from: string) => {
+    console.log('Login attempt:', { email, from });
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -107,10 +114,10 @@ export function useAuth() {
         // Handle redirect based on login source and admin status
         if (data.admin) {
           router.push('/admin');
-        } else if (from.startsWith('/admin')) {
+        } else if (from === '/login' || from === '/admin/login') {
           router.push('/');
         } else {
-          router.push(from === '/login' ? '/' : from);
+          router.push(from);
         }
       }
       return response;
@@ -121,6 +128,7 @@ export function useAuth() {
   };
 
   const logout = async () => {
+    console.log('Logout attempt');
     try {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',

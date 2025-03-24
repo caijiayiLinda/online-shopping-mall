@@ -94,7 +94,7 @@ func main() {
   adminGroup.Use(authHandler.AdminAuthMiddleware())
   {
     adminGroup.POST("/products/create", productHandler.CreateProduct)
-    adminGroup.PUT("/products/update", productHandler.UpdateProduct)
+	adminGroup.POST("/products/update/:id", productHandler.UpdateProduct)
     adminGroup.DELETE("/products/delete", productHandler.DeleteProduct)
     adminGroup.POST("/categories/create", categoryHandler.CreateCategory)
     adminGroup.PUT("/categories/update", categoryHandler.UpdateCategory)
