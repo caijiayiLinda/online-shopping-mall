@@ -2,17 +2,14 @@ package models
 
 import (
 	"golang.org/x/crypto/bcrypt"
-	"time"
 )
 
 type User struct {
 	ID        uint   `gorm:"primaryKey"`
-	Email     string `gorm:"uniqueIndex;not null"`
+	Email     string `gorm:"uniqueIndex;not null;type:varchar(255)"`
 	Password  string `gorm:"not null"`
 	Admin     bool   `gorm:"default:false"`
 	AuthToken string `gorm:"index"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
 }
 
 // HashPassword hashes the user's password

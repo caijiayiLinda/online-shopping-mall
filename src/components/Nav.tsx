@@ -38,13 +38,13 @@ interface NavProps {
 }
 
 function AuthStatus() {
-  const { isAuthenticated, isAdmin, logout } = useAuth();
+  const { isAuthenticated, isAdmin, userEmail, logout } = useAuth();
 
   return (
     <div className="flex items-center gap-2">
       {isAuthenticated ? (
         <>
-          <span className="text-sm">Welcome, {isAdmin ? 'Admin' : 'User'}</span>
+          <span className="text-sm font-medium">{userEmail}</span>
           <button
             onClick={logout}
             className="px-3 py-1 text-sm text-white bg-red-500 rounded hover:bg-red-600"

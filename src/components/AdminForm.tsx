@@ -1,4 +1,5 @@
-'use client'
+'use client';
+
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
@@ -60,7 +61,9 @@ export default function AdminForm() {
   const handleDeleteProduct = async (productId: string) => {
     if (window.confirm('确定要Delete该产品吗？')) {
       try {
-        await axios.delete(`/api/products/delete?id=${productId}`)
+        const url = new URL('/api/products/delete', window.location.origin)
+        url.searchParams.set('id', productId)
+        await axios.delete(url.toString())
         toast.success('产品Delete成功')
         fetchProducts()
       } catch (error) {
@@ -92,7 +95,9 @@ export default function AdminForm() {
       }
   
       
-      await axios.put(`/api/products/update?id=${updatedProduct.id}`, formData, {
+      const url = new URL('/api/products/update', window.location.origin)
+      url.searchParams.set('id', updatedProduct.id)
+      await axios.put(url.toString(), formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

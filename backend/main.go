@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"backend/handlers"
+	"backend/models"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -20,10 +22,27 @@ import (
 )
 
 func main() {
+	// Parse command line flags
+	seed := flag.Bool("seed", false, "Seed the database with initial users")
+	drop := flag.Bool("drop", false, "Drop all tables")
+	flag.Parse()
+
 	// Load environment variables
 	err := godotenv.Load("../.env")
 	if err != nil {
 		log.Fatal("Error loading .env file")
+	}
+
+	// Drop tables if flag is set
+	if *drop {
+		models.DropTables()
+		return
+	}
+
+	// Seed users if flag is set
+	if *seed {
+		models.SeedUsers()
+		return
 	}
 
 	dbUser := os.Getenv("DB_USER")
@@ -63,8 +82,12 @@ func main() {
 	authHandler := &handlers.AuthHandler{DB: gormDB}
 
   // Setup routes
-  router.POST("/login", authHandler.Login)
-  router.POST("/logout", authHandler.Logout)
+  router.GET("/auth/csrf-token", authHandler.GetCSRFToken)
+  router.GET("/auth/check", authHandler.CheckAuth)
+  router.POST("/auth/login", authHandler.Login)
+  router.POST("/auth/logout", authHandler.Logout)
+  router.POST("/auth/register", authHandler.Register)
+  router.POST("/auth/change-password", authHandler.ChangePassword)
   
   // Protected routes
   adminGroup := router.Group("/admin")

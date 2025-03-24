@@ -4,6 +4,9 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"net/http"
+	"os"
+	"regexp"
+	"strings"
 	"time"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -14,8 +17,15 @@ import (
 const (
 	authCookieName = "auth_token"
 	cookieExpiry   = 72 * time.Hour // 3 days
-	jwtSecret      = "your-256-bit-secret" // In production, use environment variable
 )
+
+func getJWTSecret() []byte {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		panic("JWT_SECRET environment variable not set")
+	}
+	return []byte(secret)
+}
 
 type JWTClaims struct {
 	UserID uint `json:"userId"`
@@ -29,16 +39,132 @@ type AuthHandler struct {
 
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=8"`
+	Password string `json:"password" binding:"required,min=8,max=50"`
 }
 
-func (h *AuthHandler) Login(c *gin.Context) {
-	var req LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+type RegisterRequest struct {
+	Email           string `json:"email" binding:"required,email"`
+	Password        string `json:"password" binding:"required,min=8,max=50"`
+	ConfirmPassword string `json:"confirmPassword" binding:"required,min=8,max=50"`
+}
+
+var (
+	emailRegex    = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	passwordRegex = regexp.MustCompile(`^[A-Za-z\d@$!%*?&]{8,50}$`)
+)
+
+func sanitizeInput(input string) string {
+	return strings.TrimSpace(input)
+}
+
+func (h *AuthHandler) Register(c *gin.Context) {
+	// Verify CSRF token
+	csrfToken := c.GetHeader("X-CSRF-Token")
+	if csrfToken == "" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "CSRF token missing"})
 		return
 	}
 
+	cookieCsrfToken, err := c.Cookie("csrf_token")
+	if err != nil || csrfToken != cookieCsrfToken {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Invalid CSRF token"})
+		return
+	}
+
+	var req RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	// Sanitize inputs
+	req.Email = sanitizeInput(req.Email)
+	req.Password = sanitizeInput(req.Password)
+	req.ConfirmPassword = sanitizeInput(req.ConfirmPassword)
+
+	// Validate email format
+	if !emailRegex.MatchString(req.Email) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
+		return
+	}
+
+	// Validate password format
+	if !passwordRegex.MatchString(req.Password) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid password format"})
+		return
+	}
+
+	// Check password match
+	if req.Password != req.ConfirmPassword {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Passwords do not match"})
+		return
+	}
+
+	// Check if email already exists
+	var existingUser models.User
+	if err := h.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
+		return
+	}
+
+	// Create new user
+	newUser := models.User{
+		Email:    req.Email,
+		Admin:    false, // Default to non-admin
+	}
+
+	// Hash password
+	if err := newUser.HashPassword(req.Password); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+
+	// Save user to database
+	if err := h.DB.Create(&newUser).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Registration successful"})
+}
+
+func (h *AuthHandler) Login(c *gin.Context) {
+	// Verify CSRF token
+	csrfToken := c.GetHeader("X-CSRF-Token")
+	if csrfToken == "" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "CSRF token missing"})
+		return
+	}
+
+	cookieCsrfToken, err := c.Cookie("csrf_token")
+	if err != nil || csrfToken != cookieCsrfToken {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Invalid CSRF token"})
+		return
+	}
+
+	var req LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	// Sanitize inputs
+	req.Email = sanitizeInput(req.Email)
+	req.Password = sanitizeInput(req.Password)
+
+	// Validate email format
+	if !emailRegex.MatchString(req.Email) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
+		return
+	}
+
+	// Validate password format
+	if !passwordRegex.MatchString(req.Password) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid password format"})
+		return
+	}
+
+	// Use parameterized query to prevent SQL injection
 	var user models.User
 	if err := h.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
@@ -61,24 +187,25 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(jwtSecret))
+	tokenString, err := token.SignedString(getJWTSecret())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
 
-	// Generate CSRF token
-	csrfToken := generateSecureToken()
+	// Generate new CSRF token
+	newCsrfToken := generateSecureToken()
 	
 	// Set auth cookie
 	c.SetCookie(authCookieName, tokenString, int(cookieExpiry.Seconds()), "/", "", true, true)
 	// Set CSRF cookie
-	c.SetCookie("csrf_token", csrfToken, int(cookieExpiry.Seconds()), "/", "", false, true)
+	c.SetCookie("csrf_token", newCsrfToken, int(cookieExpiry.Seconds()), "/", "", false, true)
 	
 	c.JSON(http.StatusOK, gin.H{
 		"message":    "Login successful",
 		"admin":      user.Admin,
-		"csrf_token": csrfToken,
+		"email":      user.Email,
+		"csrf_token": newCsrfToken,
 	})
 }
 
@@ -98,7 +225,7 @@ func (h *AuthHandler) AdminAuthMiddleware() gin.HandlerFunc {
 
 		claims := &JWTClaims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			return []byte(jwtSecret), nil
+			return getJWTSecret(), nil
 		})
 
 		if err != nil || !token.Valid {
@@ -142,7 +269,74 @@ func (h *AuthHandler) refreshToken(claims *JWTClaims) (string, error) {
 	claims.ExpiresAt = jwt.NewNumericDate(expirationTime)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(jwtSecret))
+	return token.SignedString(getJWTSecret())
+}
+
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"currentPassword" binding:"required,min=8,max=50"`
+	NewPassword     string `json:"newPassword" binding:"required,min=8,max=50"`
+}
+
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	// Get user from context
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	// Verify CSRF token
+	csrfToken := c.GetHeader("X-CSRF-Token")
+	if csrfToken == "" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "CSRF token missing"})
+		return
+	}
+
+	cookieCsrfToken, err := c.Cookie("csrf_token")
+	if err != nil || csrfToken != cookieCsrfToken {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Invalid CSRF token"})
+		return
+	}
+
+	var req ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	// Sanitize inputs
+	req.CurrentPassword = sanitizeInput(req.CurrentPassword)
+	req.NewPassword = sanitizeInput(req.NewPassword)
+
+	// Validate new password format
+	if !passwordRegex.MatchString(req.NewPassword) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid new password format"})
+		return
+	}
+
+	// Check current password
+	dbUser := user.(models.User)
+	if err := dbUser.CheckPassword(req.CurrentPassword); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Current password is incorrect"})
+		return
+	}
+
+	// Hash new password
+	if err := dbUser.HashPassword(req.NewPassword); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+
+	// Update password in database
+	if err := h.DB.Save(&dbUser).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
+		return
+	}
+
+	// Logout user by clearing auth cookie
+	c.SetCookie(authCookieName, "", -1, "/", "", true, true)
+	
+	c.JSON(http.StatusOK, gin.H{"message": "Password changed successfully"})
 }
 
 func generateSecureToken() string {
@@ -152,4 +346,50 @@ func generateSecureToken() string {
 		panic("failed to generate token")
 	}
 	return base64.URLEncoding.EncodeToString(token)
+}
+
+func (h *AuthHandler) GetCSRFToken(c *gin.Context) {
+	// Generate new CSRF token
+	csrfToken := generateSecureToken()
+	
+	// Set CSRF cookie
+	c.SetCookie("csrf_token", csrfToken, int(cookieExpiry.Seconds()), "/", "", false, true)
+	
+	c.JSON(http.StatusOK, gin.H{
+		"csrf_token": csrfToken,
+	})
+}
+
+func (h *AuthHandler) CheckAuth(c *gin.Context) {
+	// Get auth token from cookie
+	tokenString, err := c.Cookie(authCookieName)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"authenticated": false})
+		return
+	}
+
+	// Verify token
+	claims := &JWTClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return getJWTSecret(), nil
+	})
+
+	if err != nil || !token.Valid {
+		c.JSON(http.StatusOK, gin.H{"authenticated": false})
+		return
+	}
+
+	// Get user from database
+	var user models.User
+	if err := h.DB.First(&user, claims.UserID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"authenticated": false})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"authenticated": true,
+		"admin":         user.Admin,
+		"userId":        user.ID,
+		"email":         user.Email,
+	})
 }

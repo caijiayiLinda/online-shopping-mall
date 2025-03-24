@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -8,53 +7,93 @@ export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [csrfToken, setCsrfToken] = useState('');
+  const [userEmail, setUserEmail] = useState('');
   const router = useRouter();
+
+  const getCSRFToken = useCallback(async () => {
+    try {
+      const response = await fetch('/api/auth/csrf-token', {
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCsrfToken(data.csrf_token);
+      }
+    } catch (error) {
+      console.error('Failed to get CSRF token:', error);
+    }
+  }, []);
 
   const checkAuth = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/check', {
         credentials: 'include',
-        headers: {
-          'X-CSRF-Token': csrfToken,
-        },
       });
 
-      if (response.status === 401) {
-        // Token expired, attempt refresh
-        const refreshResponse = await fetch('/api/auth/refresh', {
-          method: 'POST',
-          credentials: 'include',
-        });
-
-        if (refreshResponse.ok) {
-          return checkAuth(); // Retry with new token
-        }
-      }
-
-      if (response.ok) {
-        const data = await response.json();
-        setIsAuthenticated(true);
-        setIsAdmin(data.isAdmin);
-        setCsrfToken(data.csrfToken);
-      } else {
+      if (!response.ok) {
         setIsAuthenticated(false);
         setIsAdmin(false);
+        return;
       }
+
+      const data = await response.json();
+      setIsAuthenticated(data.authenticated);
+      setIsAdmin(data.admin || false);
+      setUserEmail(data.email || '');
+      console.log('Auth check:', data); // Debug log
     } catch (error) {
       console.error('Auth check failed:', error);
+      setIsAuthenticated(false);
+      setIsAdmin(false);
     }
-  }, [csrfToken]);
+  }, []);
 
   useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
+    getCSRFToken();
+  }, [checkAuth, getCSRFToken]);
 
-  const login = async (email: string, password: string) => {
+  const register = async (email: string, password: string, confirmPassword: string, csrfToken: string, from: string) => {
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
+        body: JSON.stringify({ email, password, confirmPassword }),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCsrfToken(data.csrf_token);
+        await checkAuth();
+        
+        // Handle redirect based on login source and admin status
+        if (data.admin) {
+          router.push('/admin');
+        } else if (from.startsWith('/admin')) {
+          router.push('/');
+        } else {
+          router.push(from === '/login' ? '/' : from);
+        }
+      }
+      return response;
+    } catch (error) {
+      console.error('Registration failed:', error);
+      throw error;
+    }
+  };
+
+  const login = async (email: string, password: string, csrfToken: string, from: string) => {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({ email, password }),
         credentials: 'include',
@@ -62,9 +101,17 @@ export function useAuth() {
 
       if (response.ok) {
         const data = await response.json();
-        setCsrfToken(data.csrfToken);
+        setCsrfToken(data.csrf_token);
         await checkAuth();
-        router.push('/admin');
+        
+        // Handle redirect based on login source and admin status
+        if (data.admin) {
+          router.push('/admin');
+        } else if (from.startsWith('/admin')) {
+          router.push('/');
+        } else {
+          router.push(from === '/login' ? '/' : from);
+        }
       }
       return response;
     } catch (error) {
@@ -75,17 +122,17 @@ export function useAuth() {
 
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', {
+      const response = await fetch('/api/auth/logout', {
         method: 'POST',
-        headers: {
-          'X-CSRF-Token': csrfToken,
-        },
         credentials: 'include',
       });
-      setIsAuthenticated(false);
-      setIsAdmin(false);
-      setCsrfToken('');
-      router.push('/login');
+
+      if (response.ok) {
+        setIsAuthenticated(false);
+        setIsAdmin(false);
+        setCsrfToken('');
+        router.push('/login');
+      }
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -126,7 +173,9 @@ export function useAuth() {
   return {
     isAuthenticated,
     isAdmin,
+    userEmail,
     csrfToken,
+    register,
     login,
     logout,
     checkAuth,
