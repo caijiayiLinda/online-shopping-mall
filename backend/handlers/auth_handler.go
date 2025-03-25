@@ -219,7 +219,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
-func (h *AuthHandler) AdminAuthMiddleware() gin.HandlerFunc {
+func (h *AuthHandler) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Verify JWT token
 		tokenString, err := c.Cookie(authCookieName)
@@ -256,15 +256,31 @@ func (h *AuthHandler) AdminAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Check if user is admin
-		if !user.Admin {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
-			return
-		}
-
 		// Set user in context
 		c.Set("user", user)
 		c.Next()
+	}
+}
+
+func (h *AuthHandler) AdminAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// First verify auth using standard middleware
+		h.AuthMiddleware()(c)
+		if c.IsAborted() {
+			return
+		}
+
+		// Then check if user is admin
+		user, exists := c.Get("user")
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		if !user.(models.User).Admin {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+			return
+		}
 	}
 }
 
@@ -284,11 +300,7 @@ type ChangePasswordRequest struct {
 
 func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	// Get user from context
-	user, exists := c.Get("user")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
+	user := c.MustGet("user").(models.User)
 
 	// Verify CSRF token
 	csrfToken := c.GetHeader("X-CSRF-Token")
@@ -320,20 +332,19 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	}
 
 	// Check current password
-	dbUser := user.(models.User)
-	if err := dbUser.CheckPassword(req.CurrentPassword); err != nil {
+	if err := user.CheckPassword(req.CurrentPassword); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Current password is incorrect"})
 		return
 	}
 
 	// Hash new password
-	if err := dbUser.HashPassword(req.NewPassword); err != nil {
+	if err := user.HashPassword(req.NewPassword); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
 		return
 	}
 
 	// Update password in database
-	if err := h.DB.Save(&dbUser).Error; err != nil {
+	if err := h.DB.Save(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
 		return
 	}
@@ -345,12 +356,14 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 }
 
 func generateSecureToken() string {
-	// In production, use a proper token generation method like JWT
+	// Generate cryptographically secure random token
 	token := make([]byte, 32)
 	if _, err := rand.Read(token); err != nil {
-		panic("failed to generate token")
+		log.Printf("ERROR: Failed to generate secure token: %v", err)
+		panic("failed to generate secure token")
 	}
-	return base64.URLEncoding.EncodeToString(token)
+	// Use URL-safe base64 encoding without padding
+	return base64.RawURLEncoding.EncodeToString(token)
 }
 
 func (h *AuthHandler) GetCSRFToken(c *gin.Context) {

@@ -24,16 +24,16 @@ export default function AdminPage() {
   useEffect(() => {
     if (!initialCheckDone) return
     
-    if (!isAuthenticated) {
-      console.log('AdminPage redirecting to login')
+    if (!isAuthenticated || !isAdmin) {
+      console.log('AdminPage redirecting to login - auth:', isAuthenticated, 'admin:', isAdmin)
       router.push('/login?from=/admin')
     }
-  }, [isAuthenticated, initialCheckDone, router])
+  }, [isAuthenticated, isAdmin, initialCheckDone, router])
 
-  if (!isAuthenticated || !isAdmin) {
-    console.log('AdminPage rendering null (not authenticated or not admin)')
-    return null // 防止页面闪烁
-  }
+  // if (!isAuthenticated || !isAdmin) {
+  //   console.log('AdminPage rendering null (not authenticated or not admin)')
+  //   return null // 防止页面闪烁
+  // }
 
   return (
     <div className="container mx-auto p-4">

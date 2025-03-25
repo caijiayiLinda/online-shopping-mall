@@ -87,7 +87,7 @@ func main() {
   router.POST("/auth/login", authHandler.Login)
   router.POST("/auth/logout", authHandler.Logout)
   router.POST("/auth/register", authHandler.Register)
-  router.POST("/auth/change-password", authHandler.ChangePassword)
+  router.POST("/auth/change-password", authHandler.AuthMiddleware(), authHandler.ChangePassword)
   
   // Protected routes
   adminGroup := router.Group("/admin")
