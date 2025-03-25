@@ -61,9 +61,7 @@ export default function AdminForm() {
   const handleDeleteProduct = async (productId: string) => {
     if (window.confirm('确定要Delete该产品吗？')) {
       try {
-        const url = new URL('/api/products/delete', window.location.origin)
-        url.searchParams.set('id', productId)
-        await axios.delete(url.toString())
+        await axios.delete(`/api/admin/products/delete/${productId}`)
         toast.success('产品Delete成功')
         fetchProducts()
       } catch (error) {
@@ -95,7 +93,7 @@ export default function AdminForm() {
       }
   
       
-      await axios.post(`/api/products/update/${updatedProduct.id}`, formData, {
+      await axios.post(`/api/admin/products/update/${updatedProduct.id}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Accept': 'application/json'
@@ -130,7 +128,7 @@ export default function AdminForm() {
     }
 
     try {
-      await axios.post('/api/products/create', formData, {
+      await axios.post('/api/admin/products/create', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Accept': 'application/json'

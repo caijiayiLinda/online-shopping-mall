@@ -28,29 +28,28 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 	h.Logger.Printf("CreateProduct request received")
 	h.Logger.Printf("Request Headers: %v", c.Request.Header)
 
-	// Parse multipart form
-	form, err := c.MultipartForm()
-	if err != nil {
+	// Parse multipart form (needed for file upload)
+	if _, err := c.MultipartForm(); err != nil {
 		h.Logger.Printf("Error parsing form: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to parse form"})
 		return
 	}
 
 	// Get form values
-	categoryID, err := strconv.Atoi(form.Value["category_id"][0])
+	categoryID, err := strconv.Atoi(c.PostForm("category_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID"})
 		return
 	}
 
-	name := form.Value["name"][0]
-	price, err := strconv.ParseFloat(form.Value["price"][0], 64)
+	name := c.PostForm("name")
+	price, err := strconv.ParseFloat(c.PostForm("price"), 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid price"})
 		return
 	}
 
-	description := form.Value["description"][0]
+	description := c.PostForm("description")
 
 	// Handle file upload
 	h.Logger.Printf("Attempting to get uploaded file from form-data")
@@ -152,6 +151,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 	result, err := h.DB.Exec(query, categoryID, name, price, description, imageURL, thumbnailURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		h.Logger.Print(err)
 		return
 	}
 	h.Logger.Print(result)
@@ -162,6 +162,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
+
 
 	// Return created product with full image URLs
 	product := models.Product{
@@ -282,10 +283,10 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 	var query string
 	var result sql.Result
 	if newFilename != "" {
-		query = `UPDATE products SET catid = ?, name = ?, price = ?, description = ?, image_url = ?, thumbnail_url = ? WHERE pid = ?`
+		query = `UPDATE products SET catid = ?, name = ?, price = ?, description = ?, image_url = ?, thumbnail_url = ? WHERE id = ?`
 		result, err = h.DB.Exec(query, categoryID, name, price, description, "/images/" + newFilename, "/images/thumbnail_" + newFilename, productID)
 	} else {
-		query = `UPDATE products SET catid = ?, name = ?, price = ?, description = ? WHERE pid = ?`
+		query = `UPDATE products SET catid = ?, name = ?, price = ?, description = ? WHERE id = ?`
 		result, err = h.DB.Exec(query, categoryID, name, price, description, productID)
 	}
 
@@ -328,7 +329,7 @@ func (h *ProductHandler) DeleteProduct(c *gin.Context) {
 	}
 
 	// Delete product from database
-	query := `DELETE FROM products WHERE pid = ?`
+	query := `DELETE FROM products WHERE id = ?`
 	result, err := h.DB.Exec(query, productID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})

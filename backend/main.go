@@ -95,9 +95,9 @@ func main() {
   {
     adminGroup.POST("/products/create", productHandler.CreateProduct)
 	adminGroup.POST("/products/update/:id", productHandler.UpdateProduct)
-    adminGroup.DELETE("/products/delete", productHandler.DeleteProduct)
+    adminGroup.DELETE("/products/delete/:id", productHandler.DeleteProduct)
     adminGroup.POST("/categories/create", categoryHandler.CreateCategory)
-    adminGroup.PUT("/categories/update", categoryHandler.UpdateCategory)
+    adminGroup.POST("/categories/update", categoryHandler.UpdateCategory)
     adminGroup.DELETE("/categories/delete", categoryHandler.DeleteCategory)
   }
 

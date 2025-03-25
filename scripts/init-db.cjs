@@ -18,7 +18,7 @@ async function initializeDatabase() {
   `);
   await db.execute(`
     CREATE TABLE IF NOT EXISTS products (
-      pid INT PRIMARY KEY AUTO_INCREMENT,
+      id INT PRIMARY KEY AUTO_INCREMENT,
       catid INT NOT NULL,
       name VARCHAR(255) NOT NULL,
       price DECIMAL(10,2) NOT NULL,

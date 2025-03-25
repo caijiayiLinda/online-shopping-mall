@@ -56,7 +56,7 @@ func SeedUsers() {
 	}
 
 	admin := User{
-		Email:    "admin@example.com",
+		Email:    "caijiayi24@163.com",
 		Password: string(adminHash),
 		Admin:    true,
 	}
@@ -74,7 +74,7 @@ func SeedUsers() {
 	}
 
 	user := User{
-		Email:    "user@example.com",
+		Email:    "user2@example.com",
 		Password: string(userHash),
 		Admin:    false,
 	}

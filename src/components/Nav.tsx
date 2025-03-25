@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useAuth } from '@/hooks/useAuth';
+import ChangePasswordForm from './ChangePasswordForm';
 
 const useCategories = () => {
   const [categories, setCategories] = useState<string[]>([]);
@@ -39,6 +40,7 @@ interface NavProps {
 
 function AuthStatus() {
   const { isAuthenticated, isAdmin, userEmail, logout } = useAuth();
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   return (
     <div className="flex items-center gap-2">
@@ -46,11 +48,30 @@ function AuthStatus() {
         <>
           <span className="text-sm font-medium">{userEmail}</span>
           <button
+            onClick={() => setShowChangePassword(true)}
+            className="px-3 py-1 text-sm text-white bg-green-500 rounded hover:bg-green-600"
+          >
+            Change Password
+          </button>
+          <button
             onClick={logout}
             className="px-3 py-1 text-sm text-white bg-red-500 rounded hover:bg-red-600"
           >
             Logout
           </button>
+          {showChangePassword && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-lg max-w-md w-full">
+                <ChangePasswordForm />
+                <button
+                  onClick={() => setShowChangePassword(false)}
+                  className="mt-4 px-4 py-2 text-white bg-gray-500 rounded hover:bg-gray-600"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <Link

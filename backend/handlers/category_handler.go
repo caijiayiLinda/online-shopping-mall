@@ -146,7 +146,7 @@ func (h *CategoryHandler) GetCategory(c *gin.Context) {
 
 func (h *CategoryHandler) ListCategories(c *gin.Context) {
 	h.Logger.Printf("Handling ListCategories request")
-	rows, err := h.DB.Query("SELECT catid, name FROM categories")
+	rows, err := h.DB.Query("SELECT DISTINCT catid, name FROM categories")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
