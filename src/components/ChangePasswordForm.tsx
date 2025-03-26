@@ -45,7 +45,7 @@ export default function ChangePasswordForm() {
 
       setSuccess('Password changed successfully. Please login again.');
       await logout();
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred');
     } finally {
       setIsLoading(false);

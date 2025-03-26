@@ -39,7 +39,7 @@ interface NavProps {
 }
 
 function AuthStatus() {
-  const { isAuthenticated, isAdmin, userEmail, logout } = useAuth();
+  const { isAuthenticated, userEmail, logout } = useAuth();
   const [showChangePassword, setShowChangePassword] = useState(false);
 
   return (
