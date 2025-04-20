@@ -1,21 +1,37 @@
-'use client';
+  'use client';
 
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { Product } from '@/types';
 
 interface CartItem extends Product {
   quantity: number;
 }
 
-const CartContext = createContext<{
+interface User {
+  email: string;
+}
+
+interface CartContextType {
   cartItems: CartItem[];
+  user: User | null;
   addToCart: (product: Product, quantity?: number) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   removeFromCart: (productId: string) => void;
-} | null>(null);
+  setUser: (user: User | null) => void;
+}
+
+const CartContext = createContext<CartContextType>({} as CartContextType);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
 
 
   const addToCart = (product: Product, quantity: number = 1) => {
@@ -49,7 +65,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, updateQuantity, removeFromCart }}>
+    <CartContext.Provider value={{ 
+      cartItems,
+      user,
+      addToCart,
+      updateQuantity,
+      removeFromCart,
+      setUser 
+    }}>
       {children}
     </CartContext.Provider>
   );

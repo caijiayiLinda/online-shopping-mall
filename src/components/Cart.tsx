@@ -11,7 +11,7 @@ interface CartProps {
 }
 
 export default function Cart({ isOpen, onClose }: CartProps) {
-  const { cartItems, updateQuantity, removeFromCart } = useCartContext();
+  const { cartItems, updateQuantity, removeFromCart /*, user*/ } = useCartContext();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -151,31 +151,44 @@ export default function Cart({ isOpen, onClose }: CartProps) {
             <span className="font-medium">总计：</span>
             <span className="text-xl font-semibold">${totalPrice.toFixed(2)}</span>
           </div>
-          <button
-            className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors mb-2"
-            onClick={async () => {
-              try {
-                const response = await fetch('/api/checkout', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    items: cartItems,
-                    total: totalPrice.toFixed(2),
-                  }),
-                });
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            
+            // if (!user?.email) {
+            //   alert('请先登录');
+            //   return;
+            // }
 
-                const { url } = await response.json();
-                window.location.href = url;
-              } catch (error) {
-                console.error('Checkout error:', error);
-                alert('Payment processing failed, please try again later');
-              }
-            }}
-          >
-            check out
-          </button>
+            try {
+              const response = await fetch('/api/checkout/paypal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  cartItems: cartItems.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity
+                  })),
+                  invoice: `INV-${Date.now()}`,
+                  // email: user.email
+                })
+              });
+
+              const data = await response.json();
+              window.location.href = data.approvalUrl;
+            } catch (error) {
+              console.error('结账失败:', error);
+              alert('结账失败，请检查控制台');
+            }
+          }}>
+            <button
+              type="submit"
+              className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors mb-2"
+            >
+              Checkout with PayPal
+            </button>
+          </form>
           <button
             className="w-full text-blue-500 py-2 px-4 rounded hover:text-blue-600 transition-colors border border-blue-500"
           >

@@ -108,8 +108,11 @@ func main() {
   router.GET("/categories", categoryHandler.ListCategories)
   router.GET("/categories/id", categoryHandler.GetCategoryIDByName)
   router.GET("/categories/:id", categoryHandler.GetCategory)
-	router.GET("/health", func(c *gin.Context) {
+  router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})
+	})
+	router.POST("/checkout/paypal", func(c *gin.Context) {
+		handlers.CheckoutHandler(c.Writer, c.Request)
 	})
 
 	// Start server with graceful shutdown
