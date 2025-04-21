@@ -111,9 +111,8 @@ func main() {
   router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})
 	})
-	router.POST("/checkout/paypal", func(c *gin.Context) {
-		handlers.CheckoutHandler(c.Writer, c.Request)
-	})
+	router.POST("/checkout/paypal", gin.WrapH(handlers.CheckoutHandler(gormDB)))
+	router.POST("/paypal/webhook", gin.WrapH(handlers.PayPalWebhookHandler(gormDB)))
 
 	// Start server with graceful shutdown
 	server := &http.Server{
