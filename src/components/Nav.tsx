@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Product } from '@/types';
 import CartButton from './CartButton';
 import { useState, useEffect } from 'react';
+import OrderHistory from './OrderHistory';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useAuth } from '@/hooks/useAuth';
@@ -144,6 +145,7 @@ export default function Nav({ categoryId, product, children }: NavProps) {
             ))}
           </div>
           <div className="flex items-center gap-4">
+            <OrderHistory />
             <CartButton />
             <AuthStatus />
           </div>

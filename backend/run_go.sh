@@ -1,7 +1,7 @@
 #!/bin/bash
 export JWT_SECRET="secret-key" # TODO: Replace with a secure secret
 while true; do
-    21q go run main.go &
+    nohup go run main.go &
     wait $!
     echo "程序已退出，正在重新启动..."
 done
