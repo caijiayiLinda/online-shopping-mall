@@ -43,7 +43,7 @@ func SeedUsers() {
 	}
 
 	// Auto migrate models
-	err = db.AutoMigrate(&User{})
+	err = db.AutoMigrate(&User{}, &Order{}, &OrderProduct{}, &VerifiedOrder{}, &VerifiedOrderProduct{})
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}

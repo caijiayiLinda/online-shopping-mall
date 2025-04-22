@@ -11,7 +11,7 @@ interface CartProps {
 }
 
 export default function Cart({ isOpen, onClose }: CartProps) {
-  const { cartItems, updateQuantity, removeFromCart /*, user*/ } = useCartContext();
+  const { cartItems, updateQuantity, removeFromCart, user } = useCartContext();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -171,7 +171,9 @@ export default function Cart({ isOpen, onClose }: CartProps) {
                     quantity: item.quantity
                   })),
                   invoice: `INV-${Date.now()}`,
-                  // email: user.email
+                  email: user?.email || 'guest@example.com',
+                  user_id: user ? 1 : null, // 临时用户ID，实际应从user对象获取
+                  username: user?.email?.split('@')[0] || 'guest'
                 })
               });
 

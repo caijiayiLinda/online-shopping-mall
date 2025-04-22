@@ -14,9 +14,10 @@ type Order struct {
 	UserID       *uint     `json:"user_id"` // Nullable for guest users
 	Username     string    `json:"username"` // Stores either username or "guest"
 	Digest       string    `json:"digest"`
+	Invoice      string    `json:"invoice" gorm:"index"`
 	Status       string    `json:"status" gorm:"default:'pending'"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	CreatedAt    time.Time `json:"created_at" gorm:"type:timestamp"`
+	UpdatedAt    time.Time `json:"updated_at" gorm:"type:timestamp"`
 }
 
 type OrderProduct struct {

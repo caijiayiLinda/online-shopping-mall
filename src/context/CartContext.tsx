@@ -31,6 +31,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
+    
+    // Also check auth status on mount
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/check', {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.authenticated && data.email) {
+            setUser({ email: data.email });
+            localStorage.setItem('user', JSON.stringify({ email: data.email }));
+          }
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+      }
+    };
+    checkAuth();
   }, []);
 
 
