@@ -114,6 +114,7 @@ func main() {
 	router.POST("/checkout/paypal", gin.WrapH(handlers.CheckoutHandler(gormDB)))
 	router.POST("/paypal/webhook", gin.WrapH(handlers.PayPalWebhookHandler(gormDB)))
 	router.GET("/admin/orders", gin.WrapH(handlers.GetOrdersHandler(gormDB)))
+	router.GET("/orders/by-email", gin.WrapH(handlers.GetRecentOrdersByEmailHandler(gormDB)))
 
 	// Start server with graceful shutdown
 	server := &http.Server{
