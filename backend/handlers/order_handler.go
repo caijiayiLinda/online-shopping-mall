@@ -2,10 +2,13 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+
 	"time"
 
 	"backend/models"
+
 	"gorm.io/gorm"
 )
 
@@ -61,15 +64,22 @@ func GetOrdersHandler(db *gorm.DB) http.HandlerFunc {
 
 func GetRecentOrdersByEmailHandler(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		email := r.URL.Query().Get("email")
-		if email == "" {
+		emailEncoded := r.URL.Query().Get("email")
+		if emailEncoded == "" {
 			http.Error(w, "Email parameter is required", http.StatusBadRequest)
 			return
 		}
+		fmt.Println(emailEncoded)
+		
+		// email, err := url.QueryUnescape(emailEncoded)
+		// if err != nil {
+		// 	http.Error(w, "Invalid email format", http.StatusBadRequest)
+		// 	return
+		// }
 
 		var orders []models.Order
 		if err := db.Preload("Products").
-			Where("merchant_email = ?", email).
+			Where("merchant_email = ?", emailEncoded).
 			Order("created_at desc").
 			Limit(5).
 			Find(&orders).Error; err != nil {
