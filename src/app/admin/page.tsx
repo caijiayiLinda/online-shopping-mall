@@ -39,6 +39,15 @@ export default function AdminPage() {
           <h2 className="text-xl font-semibold mb-4">Add New Product</h2>
           <AdminForm />
         </div>
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Order Management</h2>
+          <a 
+            href="/admin/orders" 
+            className="inline-block bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            View Order History
+          </a>
+        </div>
       </div>
     </div>
   )

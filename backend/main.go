@@ -49,8 +49,8 @@ func main() {
 	dbPassword := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_NAME")
 
-	// Create database connection string
-	dbConn := fmt.Sprintf("%s:%s@/%s", dbUser, dbPassword, dbName)
+	// Create database connection string with parseTime parameter
+	dbConn := fmt.Sprintf("%s:%s@/%s?parseTime=true", dbUser, dbPassword, dbName)
 
 	// Initialize Gin router
 	router := gin.Default()
@@ -113,6 +113,7 @@ func main() {
 	})
 	router.POST("/checkout/paypal", gin.WrapH(handlers.CheckoutHandler(gormDB)))
 	router.POST("/paypal/webhook", gin.WrapH(handlers.PayPalWebhookHandler(gormDB)))
+	router.GET("/admin/orders", gin.WrapH(handlers.GetOrdersHandler(gormDB)))
 
 	// Start server with graceful shutdown
 	server := &http.Server{

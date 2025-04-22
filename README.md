@@ -9,7 +9,7 @@ backend: cd backend/go run main.go
 
 ## Test the server
 admin account: 
-email: caijiayi24@163.com  
+email: caijiayi24@163.com
 password: Admin@1234
 
 user account:
