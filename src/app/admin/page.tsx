@@ -100,22 +100,26 @@ function OrderHistoryTable() {
 export default function AdminPage() {
   const { isAuthenticated, isAdmin, checkAuth } = useAuth()
   const router = useRouter()
-
-  const [initialCheckDone, setInitialCheckDone] = useState(false)
-
-  useEffect(() => {
-    checkAuth().then(() => {
-      setInitialCheckDone(true)
-    })
-  }, [checkAuth, isAuthenticated, isAdmin])
+  const [authChecking, setAuthChecking] = useState(true)
 
   useEffect(() => {
-    if (!initialCheckDone) return
-    
-    if (!isAuthenticated || !isAdmin) {
-      router.push('/login?from=/admin')
+    let mounted = true
+    const verifyAdmin = async () => {
+      await checkAuth()
+      if (mounted) {
+        setAuthChecking(false)
+        if (!isAuthenticated || !isAdmin) {
+          router.replace('/login?from=/admin')
+        }
+      }
     }
-  }, [isAuthenticated, isAdmin, initialCheckDone, router])
+    verifyAdmin()
+    return () => { mounted = false }
+  }, [checkAuth, isAuthenticated, isAdmin, router])
+
+  if (authChecking || !isAuthenticated || !isAdmin) {
+    return null
+  }
 
   return (
     <div className="container mx-auto p-4">
