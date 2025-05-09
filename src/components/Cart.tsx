@@ -154,10 +154,6 @@ export default function Cart({ isOpen, onClose }: CartProps) {
           <form onSubmit={async (e) => {
             e.preventDefault();
             
-            // if (!user?.email) {
-            //   alert('请先登录');
-            //   return;
-            // }
 
             try {
               const response = await fetch('/api/checkout/paypal', {

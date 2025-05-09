@@ -35,6 +35,10 @@ export default function ProductPage() {
     };
 
     fetchProduct();
+
+    // 每5秒检查图片更新
+    const intervalId = setInterval(fetchProduct, 5000);
+    return () => clearInterval(intervalId);
   }, [params?.id]);
 
   if (!params || !params.id) {
@@ -59,7 +63,7 @@ export default function ProductPage() {
         <div className="grid md:grid-cols-2 gap-8">
           <div>
             <Image
-              src={product.image_url}
+              src={`${product.image_url}?t=${Date.now()}`}
               alt={product.name}
               width={500}
               height={500}
